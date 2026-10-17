@@ -1,0 +1,10 @@
+faster-whisper>=1.1.0
+pycapcut
+
+# Para tools/reel_frase.py y el muestrario de voces como proyecto
+# (tools/catalogo_voces.py --capcut)
+pillow
+
+# Aceleracion por GPU NVIDIA (opcional; sin esto corre en CPU)
+# nvidia-cublas-cu12      <- descomentar solo con tarjeta NVIDIA (son varios GB)
+# nvidia-cudnn-cu12

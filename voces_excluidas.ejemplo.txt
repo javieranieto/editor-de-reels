@@ -1,0 +1,11 @@
+# Voces de ElevenLabs que NO entran al muestrario (tools/catalogo_voces.py).
+#
+# Copia este archivo como voces_excluidas.txt (git lo ignora) y pon un nombre
+# de voz por linea, tal cual aparece en ElevenLabs. Van aqui las voces CLONADAS
+# de tus clientes: estan en tu cuenta porque se clonaron para su trabajo, y su
+# voz es suya, no material para otros reels. Tu propia voz clonada si puede
+# entrar: el criterio es de quien es la voz, no si esta clonada.
+#
+# Las lineas que empiezan con # se ignoran.
+#
+# Nombre de la voz clonada de un cliente

@@ -1,0 +1,25 @@
+# resultados de cada corrida (videos, transcripciones, planes) — no van al repo
+proyectos/
+
+# python
+__pycache__/
+*.pyc
+
+# plantillas extraidas de drafts reales del usuario: contienen device_id,
+# hard_disk_id, mac_address y texto hablado real. Regenerables con
+# tools/extract_templates.py. No subir.
+pipeline/templates/
+
+# claves de API: viven en .secrets/ (ver pipeline/llaves.py). Nunca suben.
+.secrets/
+*.key
+
+# la lista de voces de CLIENTES que no entran al muestrario: lleva sus nombres
+voces_excluidas.txt
+
+# sonidos de usuario: su licencia no permite redistribuirlos (ver su LEEME.md)
+recursos/sfx_usuario/*
+!recursos/sfx_usuario/LEEME.md
+
+# biblioteca de las series (imagenes, voz, musica): pesa y no va al repo
+series/
