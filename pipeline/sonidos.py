@@ -61,6 +61,11 @@ CIFRA = re.compile(r"\d")
 
 EXTENSIONES = (".mp3", ".wav", ".m4a")
 
+# Los libres que trae el repo (CC0, ver recursos/sfx/creditos.txt), por si el usuario no
+# puso los suyos en recursos/sfx_usuario/.
+LIBRES = os.path.join(os.path.dirname(CARPETA), "sfx")
+LIBRE_DE = {"swish": "whoosh.wav", "pop": "pop.wav", "riser": "riser.wav", "reveal": "impacto.wav"}
+
 
 def disponibles(carpeta=None):
     """{tipo: {ruta, parte, dur}} de los sonidos que existan en disco.
@@ -78,6 +83,13 @@ def disponibles(carpeta=None):
                 salida[tipo] = dict(cfg, archivo=base + ext,
                                     ruta=os.path.abspath(ruta))
                 break
+        else:
+            # Sin el tuyo, suena el libre que trae el repo (CC0, recursos/sfx/): mejor un
+            # sonido sencillo que ninguno. Los tuyos siempre ganan.
+            libre = os.path.join(LIBRES, LIBRE_DE.get(tipo, ""))
+            if carpeta == CARPETA and tipo in LIBRE_DE and os.path.exists(libre):
+                salida[tipo] = dict(cfg, archivo=os.path.basename(libre),
+                                    ruta=os.path.abspath(libre), libre=True)
     return salida
 
 

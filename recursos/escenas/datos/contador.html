@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ESCENA: CONTADOR — un número protagonista que cuenta hasta su valor (banco de escenas, 14-oct-2026).
+render(t, T) pinta el segundo t: entra la tarjeta, la etiqueta, el número sube con su desenfoque de movimiento y se asienta
+con un destello; abajo la comparación antes → después con su % de cambio, y una barra, un anillo o una fila de puntos.
+Horizontal (16:9) y vertical (9:16, deja libre la franja de subtítulos 70%-82% del alto).
+
+Campos de T (todos opcionales; lo que falte sale del DEFAULT):
+  marca      id de recursos/marcas/ (por defecto "ejemplo")
+  etiqueta   texto arriba del número (mono, acento) · sub  línea debajo del número ("" la quita)
+  valor      el número · pre / suf  ("$", "%", " de cada 10") · dec  decimales
+  t0         segundo en que empieza a contar · dur  cuánto tarda en llegar
+  comp       {antes, despues, etqAntes, etqDespues, invertir, pre, suf}  comparación; null la quita.
+             despues por defecto = valor. invertir:true cuando bajar es lo bueno (costo por cliente): el % sale verde al bajar.
+  forma      "barra" | "anillo" | "puntos" | "ninguna"
+  progreso   {valor: 0..1, etq}  para barra y anillo (etq = texto al lado / dentro)
+  puntos     {de, llenos}        para forma "puntos" (ej. 4 de cada 10)
+  firma      true | false | "texto propio" · camara (6) · zoom (0.045)
+Ejemplos: --T '{"valor":4,"pre":"","suf":" de cada 10","dec":0,"forma":"puntos","puntos":{"de":10,"llenos":4},"comp":null,"etiqueta":"Cuántos cerraron","sub":"de los que preguntaron por WhatsApp"}'
+          --T '{"valor":186,"pre":"$","etiqueta":"Costo por cliente","comp":{"antes":312,"invertir":true},"forma":"anillo","progreso":{"valor":0.6,"etq":"−40%"}}'
+-->
+<link rel="stylesheet" href="../base/base.css"><link rel="stylesheet" href="datos.css">
+<style>
+  .horizontal .tarjeta{left:260px;width:1400px;height:auto}
+  .vertical .tarjeta{left:56px;width:968px;height:auto}
+  #caja{position:relative;display:flex;align-items:center;justify-content:center;gap:90px;padding:90px 90px 96px}
+  .vertical #caja{flex-direction:column;gap:50px;padding:90px 60px 96px}
+  #texto{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+  #caja.con-anillo #texto{align-items:flex-start;text-align:left}
+  .vertical #caja.con-anillo #texto{align-items:center;text-align:center}
+  #etq{font-size:28px} .vertical #etq{font-size:32px}
+  #etq::before{content:"";width:34px;height:3px;border-radius:2px;background:var(--acento);display:inline-block;margin-right:14px;vertical-align:middle}
+  #numero{position:relative;font-family:var(--titulos);font-weight:700;line-height:1;letter-spacing:-.02em;white-space:nowrap;margin-top:22px;
+    font-variant-numeric:tabular-nums}
+  #numero .cifra{background:linear-gradient(105deg,transparent 42%,rgba(255,255,255,.95) 50%,transparent 58%) no-repeat,
+      linear-gradient(180deg,#fff 20%,color-mix(in srgb,var(--acento2) 55%,#fff) 100%);background-size:250% 100%,100% 100%;
+    -webkit-background-clip:text;color:transparent;
+    filter:drop-shadow(0 18px 40px rgba(0,0,0,.45))}
+  #numero .ps{font-size:.42em;color:var(--acento2);letter-spacing:0;vertical-align:.12em;margin:0 .06em}
+  #numero .pre{font-size:.6em;vertical-align:.38em}
+  #sub{font-size:30px;color:var(--tenue);margin-top:20px;font-weight:500} .vertical #sub{font-size:36px}
+  /* comparación */
+  #comp{display:flex;align-items:center;gap:22px;margin-top:40px}
+  .vertical #comp{margin-top:46px;gap:18px}
+  .pil{padding:14px 24px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid var(--borde);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .pil .e{font:500 20px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--tenue)}
+  .pil .v{font-family:var(--titulos);font-weight:700;font-size:44px;margin-top:4px;white-space:nowrap}
+  .vertical .pil .e{font-size:22px} .vertical .pil .v{font-size:44px}
+  #pilA .v{color:var(--tenue)}
+  #flecha{width:64px;height:28px;flex:none}
+  #cambio{padding:12px 22px;border-radius:999px;font-family:var(--titulos);font-weight:700;font-size:42px;white-space:nowrap;
+    display:flex;align-items:center;gap:8px}
+  .vertical #cambio{font-size:44px}
+  /* barra */
+  #barra{width:100%;max-width:880px;margin-top:46px}
+  .vertical #barra{max-width:none;width:820px}
+  #barra .pista{height:20px;border-radius:10px;background:rgba(255,255,255,.07);box-shadow:inset 0 2px 5px rgba(0,0,0,.4);position:relative;overflow:visible}
+  #barra .lleno{position:absolute;left:0;top:0;bottom:0;border-radius:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--acento) 65%,#000),var(--acento) 55%,var(--acento2));
+    box-shadow:0 0 30px color-mix(in srgb,var(--acento) 45%,transparent)}
+  #barra .lleno::after{content:"";position:absolute;right:-6px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;
+    background:radial-gradient(circle,#fff 0 30%,color-mix(in srgb,var(--acento2) 60%,transparent) 60%,transparent 72%)}
+  #barra .be{display:flex;justify-content:space-between;font:400 25px var(--mono);color:var(--tenue);margin-bottom:14px;letter-spacing:.03em}
+  .vertical #barra .be{font-size:28px}
+  /* anillo */
+  #anillo{position:relative;flex:none;width:400px;height:400px;filter:drop-shadow(0 30px 50px rgba(0,0,0,.45))}
+  .vertical #anillo{width:400px;height:400px}
+  #anillo svg{position:absolute;inset:0;transform:rotate(-90deg)}
+  #anillo .centro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  #anillo .ce{font-family:var(--titulos);font-weight:700;font-size:72px;color:#fff}
+  #anillo .cs{font:400 20px var(--mono);color:var(--tenue);letter-spacing:.08em;text-transform:uppercase;margin-top:6px;max-width:240px}
+  /* puntos */
+  #puntos{display:flex;gap:22px;margin-top:46px;flex-wrap:wrap;justify-content:center}
+  .vertical #puntos{gap:22px;max-width:780px}
+  .pt{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.07);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);position:relative}
+  .vertical .pt{width:120px;height:120px}
+  .pt i{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--acento2),var(--acento) 55%,color-mix(in srgb,var(--acento) 60%,#000));
+    box-shadow:0 10px 24px rgba(0,0,0,.4),0 0 26px color-mix(in srgb,var(--acento) 50%,transparent)}
+</style></head><body>
+<div id="halo"></div><div id="grano"></div>
+<div class="firma" id="firma"></div>
+<div id="cam"><div class="tarjeta vidrio" id="tarjeta"><div id="caja">
+  <div id="anillo"><svg viewBox="0 0 400 400"><defs><linearGradient id="gAn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--acento2)"/><stop offset="1" style="stop-color:var(--acento)"/></linearGradient></defs>
+    <circle cx="200" cy="200" r="170" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="30"/>
+    <circle id="arco" cx="200" cy="200" r="170" fill="none" stroke="url(#gAn)" stroke-width="30" stroke-linecap="round"/></svg>
+    <div class="centro"><div class="ce num" id="anE"></div><div class="cs" id="anS"></div></div></div>
+  <div id="texto">
+    <div class="etiqueta" id="etq"></div>
+    <div id="numero"><span class="cifra" id="cifra"></span></div>
+    <div id="sub"></div>
+    <div id="comp"><div class="pil" id="pilA"><div class="e" id="cAe"></div><div class="v num" id="cAv"></div></div>
+      <svg id="flecha" viewBox="0 0 64 28"><path id="fl" d="M2 14 H54 M42 3 L56 14 L42 25" fill="none" stroke="var(--tenue)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="pil" id="pilD"><div class="e" id="cDe"></div><div class="v num" id="cDv"></div></div>
+      <div id="cambio" class="num"></div></div>
+    <div id="barra"><div class="be"><span id="bE"></span><span id="bP" class="num"></span></div><div class="pista"><div class="lleno" id="bL"></div></div></div>
+    <div id="puntos"></div>
+  </div>
+</div></div></div>
+<script src="../base/base.js"></script><script src="datos.js"></script>
+<script>
+const DEFAULT = {
+  marca:"ejemplo", etiqueta:"Lo que trajo el seguimiento", valor:27300, pre:"$", suf:"", dec:0,
+  sub:"en un mes · datos de ejemplo", t0:0.6, dur:1.8,
+  comp:{antes:12300, etqAntes:"Mes anterior", etqDespues:"Este mes"},
+  forma:"barra", progreso:{valor:0.546, etq:"Meta del mes: $50,000"}, puntos:{de:10, llenos:4},
+  firma:true, camara:6, zoom:0.045
+};
+const fmtN = (v, dec, pre, suf) => `${pre?`<span class="ps pre">${pre}</span>`:''}${fmt(v,dec)}${suf?`<span class="ps">${suf}</span>`:''}`;
+let armado = "";
+function render(t, T, escena){
+  T = Object.assign({}, DEFAULT, T); marca(T); t_global = t; firma(T);
+  const V = vertical(), F = T.forma, conAn = F==='anillo';
+  $('caja').classList.toggle('con-anillo', conAn);
+  $('anillo').style.display = conAn ? '' : 'none'; $('barra').style.display = F==='barra' ? '' : 'none';
+  $('puntos').style.display = F==='puntos' ? '' : 'none'; $('comp').style.display = T.comp ? '' : 'none';
+  $('etq').style.display = T.etiqueta ? '' : 'none'; $('sub').style.display = T.sub ? '' : 'none';
+  $('etq').textContent = T.etiqueta || ''; $('sub').textContent = T.sub || '';
+  empuje(t, T); entraTarjeta($('tarjeta'), t);
+  const tj = $('tarjeta'), ha = tj.offsetHeight;          // la tarjeta mide lo que su contenido; se centra en la zona útil
+  tj.style.top = (V ? Math.max(230, 765 - ha/2) : Math.max(120, 560 - ha/2)) + 'px';
+  // tamaño del número: el más grande que quepa (se mide con el valor final, así no brinca mientras cuenta)
+  const cl = JSON.stringify([T.valor, T.pre, T.suf, T.dec, V, F, T.marca, document.fonts.status, T.puntos]);
+  const num = $('numero'), cif = $('cifra');
+  if(cl !== armado){
+    armado = cl;
+    if(F==='puntos'){ let h=''; for(let i=0;i<T.puntos.de;i++) h += `<div class="pt"><i id="pt${i}"></i></div>`; $('puntos').innerHTML = h; }
+    const max = V ? 840 : (conAn ? 1400-180-400-90 : 1180);
+    let fs = V ? 230 : 250; num.style.fontSize = fs+'px'; cif.innerHTML = fmtN(T.valor, T.dec, T.pre, T.suf);
+    while(num.scrollWidth > max && fs > 60){ fs -= 6; num.style.fontSize = fs+'px'; }
+  }
+  // etiqueta y número
+  entra($('etq'), t, .3, .5, 18);
+  const k = prog(t, T.t0, T.dur), vel = Math.max(0, (prog(t, T.t0, T.dur) - prog(t-1/30, T.t0, T.dur))*30);   // velocidad del conteo -> desenfoque
+  cif.innerHTML = fmtN(T.valor*k, T.dec, T.pre, T.suf);
+  const en = resorte(t, T.t0-.15, .7), golpe = resorte(t, T.t0+T.dur-.05, .45);
+  num.style.opacity = prog(t, T.t0-.15, .35);
+  num.style.transform = `translateY(${40*(1-en)}px) scale(${(.9+.1*en)*(1+.035*Math.sin(Math.PI*Math.min(1,Math.max(0,(t-T.t0-T.dur+.05)/.45))))})`;
+  num.style.filter = vel>.05 ? `blur(${Math.min(2.5, vel*1.6)}px)` : 'none';
+  const bx = prog(t, T.t0+T.dur, .8); cif.style.backgroundPosition = `${130-160*bx}% 0, 0 0`;   // destello que cruza la cifra al llegar
+  entra($('sub'), t, T.t0+T.dur*.6, .5, 16);
+  // comparación
+  const tc = T.t0 + T.dur + .15;
+  if(T.comp){
+    const C = Object.assign({etqAntes:"Antes", etqDespues:"Después", invertir:false}, T.comp), d = C.despues ?? T.valor;
+    const pre = C.pre ?? T.pre, suf = C.suf ?? T.suf;
+    $('cAe').textContent = C.etqAntes; $('cDe').textContent = C.etqDespues;
+    $('cAv').textContent = pre + fmt(C.antes, T.dec) + suf; $('cDv').textContent = pre + fmt(d, T.dec) + suf;
+    const pct = (d - C.antes) / C.antes * 100, bueno = C.invertir ? pct < 0 : pct > 0, col = bueno ? 'var(--bien)' : 'var(--mal)';
+    const pk = prog(t, tc+.45, .8);
+    $('cambio').textContent = `${pct>=0?'+':'−'}${fmt(Math.abs(pct)*pk,0)}%`;
+    const cb = $('cambio'); cb.style.color = col; cb.style.background = `color-mix(in srgb,${col} 16%,transparent)`;
+    cb.style.boxShadow = `inset 0 0 0 2px color-mix(in srgb,${col} 45%,transparent),0 0 ${30*pk}px color-mix(in srgb,${col} 30%,transparent)`;
+    entra($('pilA'), t, tc, .4, 20); entra($('pilD'), t, tc+.25, .4, 20);
+    const fk = prog(t, tc+.1, .35); $('flecha').style.opacity = fk; $('flecha').style.transform = `translateX(${-16*(1-fk)}px)`;
+    const ck = resorte(t, tc+.45, .5); cb.style.opacity = prog(t, tc+.45, .25); cb.style.transform = `scale(${.6+.4*ck})`;
+    $('comp').style.flexWrap = V ? 'wrap' : 'nowrap'; $('comp').style.justifyContent = 'center';
+  }
+  const tp = T.comp ? tc + .7 : T.t0 + T.dur*.5;
+  if(F==='barra'){
+    const P = T.progreso, bk = prog(t, tp, 1.1); entra($('barra'), t, tp-.25, .45, 18);
+    $('bE').textContent = P.etq || ''; $('bP').textContent = fmt(100*P.valor*bk) + '%';
+    $('bL').style.width = (100*P.valor*bk)+'%';
+  }
+  if(conAn){
+    const P = T.progreso, ak = prog(t, T.t0, T.dur+.3), L = 2*Math.PI*170, ar = $('arco');
+    ar.style.strokeDasharray = L; ar.style.strokeDashoffset = L*(1 - P.valor*ak); ar.style.opacity = ak>0 ? 1 : 0;
+    $('anE').textContent = P.etq ? '' : fmt(100*P.valor*ak)+'%'; $('anS').textContent = P.etq || '';
+    if(P.etq){ $('anE').textContent = P.etq; $('anE').style.opacity = prog(t, T.t0+T.dur, .5); $('anS').textContent = ''; }
+    const an = resorte(t, .2, .8); $('anillo').style.opacity = prog(t,.2,.4); $('anillo').style.transform = `scale(${.85+.15*an}) rotate(${-20*(1-an)}deg)`;
+  }
+  if(F==='puntos'){
+    const P = T.puntos;
+    for(let i=0;i<P.de;i++){ const el = $("pt"+i), a = T.t0 + T.dur*.9*i/Math.max(1,P.llenos);   // se llenan al paso del conteo
+      el.parentNode.style.opacity = prog(t, T.t0 + .05*i, .3);
+      const r = i < P.llenos ? resorte(t, a, .45) : 0; el.style.transform = `scale(${Math.max(0,r)})`; el.style.opacity = r>0?1:0; }
+  }
+}
+</script></body></html>

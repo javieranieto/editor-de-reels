@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ÍCONO ANIMADO del banco (Lottie, ya en los colores de la marca). Fondo TRANSPARENTE: capturar con --alfa para
+ponerlo en CapCut donde se quiera, o usar la misma idea dentro de otra escena (ver tarjetas/lateral.html, T.icono).
+T = { marca: id de recursos/marcas/, icono: "telefono" (ver fuentes.json), t0: segundo en que arranca, velocidad: 1,
+      loop: false (true = se repite), tam: px (por defecto 60% del lado corto), x, y: centro (por defecto el centro) }
+Determinista: cada cuadro se calcula de t (goToAndStop), sin reproducir en tiempo real. -->
+<link rel="stylesheet" href="../base/base.css">
+<style>#ic{position:absolute}</style></head><body class="alfa">
+<div id="ic"></div>
+<script src="../base/base.js"></script><script src="../base/lottie.min.js"></script><script src="iconos.js"></script>
+<script>
+const DEFAULT = {marca:"ejemplo", icono:"telefono", t0:0, velocidad:1, loop:false, tam:null, x:null, y:null};
+let A = null, clave = "";
+function render(t, T){
+  T = Object.assign({}, DEFAULT, T); marca(T);
+  const W = innerWidth, H = innerHeight, tam = T.tam || Math.min(W, H) * 0.6, el = $('ic');
+  Object.assign(el.style, {width: tam+'px', height: tam+'px', left: ((T.x ?? W/2) - tam/2)+'px', top: ((T.y ?? H/2) - tam/2)+'px'});
+  const k = T.marca + '/' + T.icono;
+  if (k !== clave){ if (A) A.destroy(); el.innerHTML = '';
+    A = lottie.loadAnimation({container: el, renderer: 'svg', loop: false, autoplay: false, animationData: window.ICONOS[T.marca][T.icono]}); clave = k; }
+  const d = window.ICONOS[T.marca][T.icono], total = d.op - d.ip;
+  let f = Math.max(0, (t - T.t0)) * d.fr * T.velocidad;
+  f = T.loop ? f % total : Math.min(f, total - 1);
+  A.goToAndStop(f, true);
+  el.style.opacity = t < T.t0 ? 0 : 1;
+}
+</script></body></html>

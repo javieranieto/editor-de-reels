@@ -1,0 +1,12 @@
+{
+ "id": "ejemplo",
+ "nombre": "Tu marca",
+ "firma": "TU MARCA  ·  lo que haces en una frase",
+ "colores": {
+  "fondo1": "#1f3b44", "fondo2": "#12252b", "fondo3": "#0a1518", "marca": "#1f3b44",
+  "acento": "#F2B33D", "acento2": "#f7d58c", "texto": "#eef3f2", "tenue": "#9fb3b0",
+  "tarjeta": "rgba(31,59,68,.78)", "borde": "rgba(255,255,255,.10)", "bien": "#2fd27a", "mal": "#ff5d5d"
+ },
+ "letras": {"titulos": "Poppins", "cuerpo": "Poppins", "mono": "Roboto Mono"},
+ "archivos_de_letra": {}
+}

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ESCENA: tablero de un CRM sencillo (14-oct-2026). Software genérico, sin logos ni nombres de terceros (el ORIGEN
+de cada prospecto es solo texto, como lo guarda un CRM de verdad). Laptop en 16:9, teléfono en 9:16.
+Arriba 4 indicadores que cuentan; abajo la lista de prospectos con origen, estado en píldora que CAMBIA en su tiempo
+(Nuevo → Cotizado → Cerrado / Perdido) y monto. Una fila se resalta y la cámara se acerca; al cerrarse, sube
+«Cerrados» y «Cobrado» con un «+$2,400» que flota.
+
+render(t, T, escena) pinta el segundo t. Campos de T (todos opcionales; se mezclan con DEFAULT):
+  marca id de recursos/marcas/   firma false = sin firma   negocio, sucursal, usuario   periodo "Este mes"
+  kpis        [{id, et: etiqueta, v: valor al empezar, dinero: true|false, sub: texto chico debajo}]
+              ids que reaccionan solos: "cerrados" (+1 por cada fila que pasa a Cerrado) y "cobrado" (+ su monto)
+  cuenta      segundo en que los indicadores empiezan a subir (duran 1.3 s)
+  prospectos  [{n: nombre, tel, o: origen ("Facebook","Google","Recomendación",…), s: servicio, m: monto en pesos,
+                cuando: "hace 5 min", entra: segundo en que aparece la fila (si falta, entran escalonadas),
+                pasos: [["Nuevo",0],["Cotizado",2.1],["Cerrado",3.6]]  estado y desde qué segundo}]
+              estados: "Nuevo" · "Cotizado" · "Cerrado" · "Perdido". Sin monto → «—» hasta que se cotiza.
+  entran      [inicio, fin] para las filas sin `entra`
+  resalta     {fila: índice, t: segundo}  la fila se marca y la cámara va a ella   (null = ninguna)
+  camara      [{t, fila: i | foco: "kpis" | "todo", z}]  si falta, se arma sola (fila resaltada → indicadores)
+Ejemplo: --T '{"resalta":{"fila":0,"t":2},"prospectos":[{"n":"Rosa Díaz","o":"Google","s":"Frenos","m":3200,"pasos":[["Nuevo",0],["Cerrado",3]]}]}'
+-->
+<link rel="stylesheet" href="../base/base.css"><link rel="stylesheet" href="negocio.css">
+<style>
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .kpi{padding:14px 16px 12px;position:relative;overflow:visible}
+  .kpi .et{font-size:13px;color:#5b6477;font-weight:600;display:flex;align-items:center;gap:7px}
+  .kpi .et i{width:8px;height:8px;border-radius:50%}
+  .kpi .num{font-size:30px;font-weight:700;color:#141a29;letter-spacing:-.6px;margin-top:4px;line-height:1.1}
+  .kpi .sub{font-size:12px;color:#178a4c;font-weight:600;margin-top:3px}
+  .kpi svg{position:absolute;right:14px;bottom:14px}
+  .flota{position:absolute;right:16px;top:12px;font-weight:700;font-size:15px;color:#178a4c;background:#e3f8ec;border-radius:8px;padding:2px 8px;opacity:0}
+  .tabs{display:flex;gap:4px;align-items:center;border-bottom:1px solid #e6e8ee;padding:0 6px}
+  .tabs span{padding:12px 12px;font-size:13.5px;color:#5b6477;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .tabs span b{font-weight:600;color:#9aa1b2;margin-left:4px}
+  .tabs span.on{color:#141a29;border-color:var(--acento)}
+  .tabla{position:relative}
+  .th,.fila{display:grid;grid-template-columns:2.3fr 1.25fr 1.2fr 1.5fr 1fr 1.05fr;align-items:center;padding:0 18px;gap:10px}
+  .th{height:40px;font-size:12px;font-weight:700;color:#7a8296;text-transform:uppercase;letter-spacing:.04em;background:#fafbfc;border-bottom:1px solid #eef0f4}
+  .fila{position:relative;height:54px;border-bottom:1px solid #f0f1f4;font-size:14px;background:#fff}
+  .fila .quien{display:flex;align-items:center;gap:11px;min-width:0}
+  .fila .quien b{display:block;font-weight:600;color:#141a29;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fila .quien small{display:block;font-size:12px;color:#8a93a6}
+  .orig{display:flex;align-items:center;gap:7px;color:#3b4457;white-space:nowrap} .orig i{width:8px;height:8px;border-radius:50%;flex:none}
+  .monto{font-weight:700;color:#141a29;text-align:right} .monto.gris{color:#9aa1b2;font-weight:600} .monto.tachado{text-decoration:line-through;color:#b4bac6;font-weight:600}
+  .monto.verde{color:#178a4c}
+  .cuando{color:#8a93a6;font-size:13px;text-align:right}
+  .barra-res{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--acento);opacity:0}
+  /* teléfono */
+  .tel-app{background:#f5f6f8}
+  .tel-app .cab{position:absolute;left:0;right:0;top:50px;height:64px;display:flex;align-items:center;padding:0 20px;gap:10px}
+  .tel-app .cab h1{font-size:27px;font-weight:700;color:#141a29}
+  .tel-app .cab .der{margin-left:auto;display:flex;gap:12px;align-items:center;color:#3b4457}
+  .tel-app .kpis{grid-template-columns:1fr 1fr;gap:10px;position:absolute;left:16px;right:16px;top:156px}
+  .tel-app .kpi{padding:12px 14px}
+  .tel-app .kpi .num{font-size:25px}
+  .tel-app .kpi svg{display:none}
+  .tel-app .flota{right:10px;top:10px;font-size:13px}
+  .chips{position:absolute;left:16px;right:0;top:116px;display:flex;gap:8px}
+  .chips span{height:30px;border-radius:15px;padding:0 12px;font-size:13px;font-weight:600;display:flex;align-items:center;background:#fff;border:1px solid #e3e6ec;color:#3b4457;white-space:nowrap}
+  .chips span.on{background:#141a29;color:#fff;border-color:#141a29}
+  .lista{position:absolute;left:12px;right:12px;top:372px;bottom:84px;overflow:hidden;border-radius:14px}
+  .lista .tl{font-size:13px;font-weight:700;color:#7a8296;text-transform:uppercase;letter-spacing:.05em;padding:4px 6px 8px;display:flex;justify-content:space-between}
+  .tarjp{position:relative;background:#fff;border-radius:12px;border:1px solid #e9ebf0;padding:11px 12px;display:flex;align-items:center;gap:11px;margin-bottom:8px;height:66px}
+  .tarjp .med{flex:1;min-width:0}
+  .tarjp b{display:block;font-size:15px;font-weight:600;color:#141a29;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tarjp small{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#7a8296;margin-top:2px;white-space:nowrap}
+  .tarjp small i{width:7px;height:7px;border-radius:50%}
+  .tarjp .fin{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .tarjp .monto{font-size:14px}
+  .tabbar{position:absolute;left:0;right:0;bottom:0;height:80px;background:rgba(255,255,255,.96);border-top:1px solid #e6e8ee;display:flex;justify-content:space-around;padding-top:10px;font-size:11px;color:#8a93a6;font-weight:600}
+  .tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px} .tabbar div.on{color:var(--acento)}
+</style></head><body>
+<div class="firma" id="firma"></div>
+<div id="escena"></div>
+<script src="../base/base.js"></script><script src="dispositivo.js"></script>
+<script>
+const DEFAULT = {
+  marca:"ejemplo", negocio:"Clínica Dental Del Valle", sucursal:"Consultorio Centro", usuario:"Recepción", periodo:"Este mes",
+  kpis:[{id:"contactos",et:"Contactos",v:64,sub:"▲ 12 esta semana"},{id:"citas",et:"Citas",v:31,sub:"48% de los contactos"},
+        {id:"cerrados",et:"Cerrados",v:18,sub:"▲ 3 vs. mes pasado"},{id:"cobrado",et:"Cobrado",v:41800,dinero:true,sub:"▲ 9% vs. mes pasado"}],
+  cuenta:0.3,
+  prospectos:[
+    {n:"Mariana Herrera",tel:"555 ••• 7731",o:"Facebook",s:"Limpieza dental",m:null,cuando:"hace 4 min",pasos:[["Nuevo",0]]},
+    {n:"Jesús Martínez",tel:"555 ••• 4425",o:"Google",s:"Resina en muela",m:2400,cuando:"hace 25 min",pasos:[["Nuevo",0],["Cotizado",1.9],["Cerrado",3.7]]},
+    {n:"Claudia Vega",tel:"555 ••• 1902",o:"Recomendación",s:"Ortodoncia",m:18500,cuando:"hace 1 h",pasos:[["Cotizado",0]]},
+    {n:"Fernando Ibarra",tel:"555 ••• 0187",o:"Facebook",s:"Blanqueamiento",m:3800,cuando:"hace 2 h",pasos:[["Cotizado",0],["Perdido",4.6]]},
+    {n:"Lucía Contreras",tel:"555 ••• 6650",o:"Google",s:"Extracción",m:1500,cuando:"ayer",pasos:[["Cerrado",0]]},
+    {n:"Raúl Mendoza",tel:"555 ••• 3304",o:"Facebook",s:"Valoración",m:null,cuando:"ayer",pasos:[["Nuevo",0]]},
+    {n:"Teresa Aguilar",tel:"555 ••• 7719",o:"Recomendación",s:"Corona",m:6200,cuando:"hace 2 días",pasos:[["Cerrado",0]]},
+  ],
+  entran:[0.35, 1.2],
+  resalta:{fila:1, t:2.9},
+  camara:null,
+};
+const COL_ORIG = {"Facebook":"#4c6fd6","Google":"#e0912b","Recomendación":"#2fa36b","Instagram":"#c2509b","WhatsApp":"#25a35a","Sitio web":"#7d6bd0"};
+const PIL = {"Nuevo":"p-nuevo","Cotizado":"p-cotizado","Cerrado":"p-cerrado","Perdido":"p-perdido"};
+const SENAL = '<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="1" fill="currentColor"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>';
+const SPARK = ["M0 26 L12 22 L24 24 L36 16 L48 18 L60 10 L72 6","M0 24 L12 25 L24 18 L36 20 L48 13 L60 14 L72 8","M0 27 L12 23 L24 21 L36 22 L48 15 L60 11 L72 5","M0 26 L12 20 L24 22 L36 14 L48 15 L60 9 L72 4"];
+let CLAVE = "";
+
+function estado(p, t){ let e = p.pasos[0][0], t0 = -1; for (const [st, ts] of p.pasos) if (t >= ts){ e = st; t0 = ts; } return {e, t0}; }
+
+function construye(T){
+  const v = vertical(), app = montaDispositivo(v ? "telefono" : "laptop");
+  app.className = v ? "tel-app" : "";
+  const kpis = T.kpis.map((k,j)=>`<div class="kpi tarj" id="k-${k.id}"><div class="et"><i style="background:${["#4c6fd6","#e0912b","#2fa36b","var(--acento)"][j%4]}"></i>${k.et}</div>
+      <div class="num" id="kn-${k.id}">0</div>${k.sub?`<div class="sub">${k.sub}</div>`:''}
+      <svg width="74" height="30" viewBox="0 0 74 30"><path id="sp-${k.id}" d="${SPARK[j%4]}" fill="none" stroke="${["#4c6fd6","#e0912b","#2fa36b","var(--acento)"][j%4]}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
+      <div class="flota" id="fl-${k.id}"></div></div>`).join("");
+  const nCerr = T.prospectos.filter(p=>p.pasos[p.pasos.length-1][0]==="Cerrado").length;
+  if (!v){
+    app.innerHTML = ladoNeg(T, "Prospectos", [["inicio","Inicio"],["clientes","Prospectos","5"],["agenda","Agenda"],["mensajes","Mensajes"],["cotiz","Cotizaciones"],["grafica","Reportes"],["ajustes","Ajustes"]])
+    + `<div class="principal">${arribaNeg("Buscar por nombre o teléfono…")}<div class="cuerpo" style="padding-top:20px">
+      <div class="titpag" style="margin-bottom:14px"><div><h1>Prospectos</h1><div class="sub">${T.periodo} · ${T.sucursal}</div></div>
+        <div class="acc"><div class="chip">📅&nbsp;${T.periodo} ▾</div><div class="chip">Todos los orígenes ▾</div><div class="btn pri">${ICONO("mas",15)} Nuevo prospecto</div></div></div>
+      <div class="kpis" id="kpis">${kpis}</div>
+      <div class="tarj tabla" id="tabla"><div class="tabs"><span class="on">Todos<b>${T.kpis[0]?.v ?? ''}</b></span><span>Nuevos<b>12</b></span><span>Cotizados<b>9</b></span><span>Cerrados<b>${T.kpis.find(k=>k.id==="cerrados")?.v ?? nCerr}</b></span><span>Perdidos<b>7</b></span></div>
+        <div class="th"><span>Prospecto</span><span>Origen</span><span>Estado</span><span>Servicio</span><span style="text-align:right">Monto</span><span style="text-align:right">Contacto</span></div>
+        ${T.prospectos.map((p,i)=>`<div class="fila" id="f${i}"><div class="barra-res"></div>
+          <div class="quien"><div class="ava" style="background:${colorAva(p.n)}">${iniciales(p.n)}</div><div style="min-width:0"><b>${p.n}</b><small>${p.tel||''}</small></div></div>
+          <div class="orig"><i style="background:${COL_ORIG[p.o]||'#8a93a6'}"></i>${p.o}</div>
+          <div><span class="pildora" id="pl${i}"></span></div>
+          <div style="color:#3b4457;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.s||''}</div>
+          <div class="monto" id="mo${i}"></div><div class="cuando">${p.cuando||''}</div></div>`).join("")}
+      </div></div></div>`;
+  } else {
+    app.innerHTML = `<div class="barraest"><span>10:24</span><span class="ico">${SENAL}<span class="bat"></span></span></div>
+      <div class="cab"><h1>Prospectos</h1><div class="der">${ICONO("busca",22)}<div class="ava" style="background:var(--marca);width:34px;height:34px">${iniciales(T.negocio.replace(/^(Clínica|Taller|Cerrajería)\s+/,''))}</div></div></div>
+      <div class="chips"><span class="on">${T.periodo}</span><span>Todos</span><span>Nuevos</span><span>Cotizados</span></div>
+      <div class="kpis" id="kpis">${kpis}</div>
+      <div class="lista" id="tabla"><div class="tl"><span>Recientes</span><span style="color:var(--acento)">Ver todos</span></div>
+        ${T.prospectos.map((p,i)=>`<div class="tarjp" id="f${i}"><div class="barra-res" style="border-radius:12px 0 0 12px"></div>
+          <div class="ava" style="background:${colorAva(p.n)};width:38px;height:38px">${iniciales(p.n)}</div>
+          <div class="med"><b>${p.n}</b><small><i style="background:${COL_ORIG[p.o]||'#8a93a6'}"></i>${p.o} · ${p.cuando||''}</small></div>
+          <div class="fin"><span class="pildora" id="pl${i}"></span><span class="monto" id="mo${i}"></span></div></div>`).join("")}
+      </div>
+      <div class="tabbar"><div>${ICONO("inicio",22)}Inicio</div><div>${ICONO("agenda",22)}Agenda</div><div class="on">${ICONO("clientes",22)}Prospectos</div><div>${ICONO("mensajes",22)}Mensajes</div></div>`;
+  }
+}
+
+function render(t, T, escena){
+  T = Object.assign({}, DEFAULT, T || {});
+  marca(T); firmaNeg(T);
+  const clave = JSON.stringify(T) + vertical();
+  if (clave !== CLAVE){ CLAVE = clave; construye(T); }
+  const P = T.prospectos, n = P.length;
+  // filas: entran escalonadas; la píldora cambia en su segundo con un pequeño rebote
+  let sumaCerr = 0, sumaCob = 0, ultimoCierre = -1, montoCierre = 0;
+  P.forEach((p,i)=>{
+    const ent = p.entra!=null ? p.entra : T.entran[0] + i*(T.entran[1]-T.entran[0])/Math.max(1,n-1);
+    const f = $("f"+i), a = prog(t, ent, 0.4);
+    f.style.opacity = a; f.style.transform = `translateY(${18*(1-a)}px)`;
+    const {e, t0} = estado(p, t), pl = $("pl"+i);
+    pl.className = "pildora " + (PIL[e] || "p-gris"); pl.textContent = e;
+    const cambio = t0 > 0;   // cambió dentro de la escena (no venía así)
+    pl.style.transform = cambio ? `scale(${0.75 + 0.25*resorte(t, t0, 0.45)})` : "none";
+    const mo = $("mo"+i);
+    if (p.m == null || e === "Nuevo"){ mo.textContent = "—"; mo.className = "monto gris"; }
+    else { mo.textContent = pesos(p.m); mo.className = "monto" + (e==="Cerrado" ? " verde" : e==="Perdido" ? " tachado" : ""); }
+    // destello de la fila cuando cambia
+    const fl = cambio ? Math.max(0, 1 - (t - t0)/0.9) : 0;
+    const res = T.resalta && T.resalta.fila === i ? prog(t, T.resalta.t, 0.35) : 0;
+    f.style.background = `color-mix(in srgb, var(--acento) ${Math.round(8*res + 14*fl)}%, #fff)`;
+    f.style.boxShadow = res > 0 ? `0 0 0 ${2*res}px color-mix(in srgb,var(--acento) 60%,transparent), 0 12px 28px rgba(16,24,40,${.16*res})` : "none";
+    f.style.zIndex = res > 0 ? 3 : 1;
+    f.querySelector(".barra-res").style.opacity = res;
+    if (cambio && e === "Cerrado"){ sumaCerr++; sumaCob += p.m||0; if (t0 > ultimoCierre){ ultimoCierre = t0; montoCierre = p.m||0; } }
+  });
+  // indicadores: cuentan desde «cuenta»; cerrados y cobrado suben con cada cierre de la escena
+  const kc = prog(t, T.cuenta, 1.3);
+  T.kpis.forEach(k=>{
+    let val = k.v*kc;
+    if (k.id === "cerrados") val += sumaCerr;
+    if (k.id === "cobrado") val += sumaCob;
+    $("kn-"+k.id).textContent = k.dinero ? pesos(Math.round(val)) : Math.round(val).toLocaleString("es-MX");
+    $("sp-"+k.id).style.strokeDashoffset = 1 - prog(t, T.cuenta + 0.2, 1.4);
+    const fl = $("fl-"+k.id), d = t - ultimoCierre;
+    const golpe = (k.id==="cerrados"||k.id==="cobrado") && ultimoCierre>0 && d>=0 && d<0.5 ? 1 + 0.08*Math.sin(d/0.5*Math.PI) : 1;
+    $("kn-"+k.id).style.transform = `scale(${golpe})`; $("kn-"+k.id).style.transformOrigin = "left center";
+    if ((k.id==="cobrado"||k.id==="cerrados") && ultimoCierre>0 && d>=0){
+      fl.textContent = k.id==="cobrado" ? "+" + pesos(montoCierre) : "+1";
+      fl.style.opacity = prog(t, ultimoCierre, 0.2) * (1 - prog(t, ultimoCierre+1.6, 0.4));
+      fl.style.transform = `translateY(${-14*ease(d/1.2)}px)`;
+    } else fl.style.opacity = 0;
+  });
+  // cámara
+  let cam = T.camara;
+  if (!cam){
+    cam = [];
+    if (T.resalta){
+      const p = P[T.resalta.fila]; const cierre = p.pasos.find(s=>s[0]==="Cerrado" && s[1]>0);
+      cam.push({t:T.resalta.t-0.5, fila:T.resalta.fila, z: vertical()?1.45:2.0});
+      if (cierre) cam.push({t:cierre[1]+0.45, foco:"kpis", z: vertical()?1.3:1.45});
+    }
+  }
+  camaraNeg(t, cam.map(k=>({t:k.t, d:k.d, z:k.z, foco: k.fila!=null ? "f"+k.fila : (k.foco==="todo" ? null : k.foco), dx: k.fila!=null && !vertical() ? -60 : 0})));
+}
+</script></body></html>

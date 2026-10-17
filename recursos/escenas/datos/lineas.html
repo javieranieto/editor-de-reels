@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ESCENA: gráfica de LÍNEA que se dibuja de izquierda a derecha (banco de escenas, 14-oct-2026).
+render(t, T) pinta el segundo t: la línea avanza con una cabeza luminosa, el área degradada la sigue, los puntos aparecen
+al pasar, y al llegar al punto clave sale la anotación con flecha («aquí se apagó la pauta») y se sombrea lo que viene.
+Horizontal (16:9) y vertical (9:16, deja libre la franja de subtítulos 70%-82% del alto).
+
+Campos de T (todos opcionales; lo que falte sale del DEFAULT):
+  marca      id de recursos/marcas/ (por defecto "ejemplo")
+  etiqueta   texto chico arriba del título ("" lo quita) · titulo
+  puntos     [{etq, valor}]   etq = etiqueta del eje X (semana, mes)
+  pre, suf, dec   formato de los valores ("$", "%", decimales)
+  nota       {i, texto, sub, zona}  i = índice del punto que se anota; sub = segunda línea opcional;
+             zona = true sombrea desde ese punto al final. null = sin anotación
+  valores    "clave" (máximo, anotado y último) | "todos" | "ninguno"
+  t0         segundo en que empieza a dibujarse · dur  cuánto tarda en cruzar la gráfica
+  pie        fuente o aclaración abajo ("" la quita)
+  firma      true | false | "texto propio" · camara (6) · zoom (0.045)
+Ejemplo: --T '{"titulo":"Ventas por mes","puntos":[{"etq":"jun","valor":120},{"etq":"jul","valor":90}],"nota":{"i":1,"texto":"Se cayó la página"}}'
+-->
+<link rel="stylesheet" href="../base/base.css"><link rel="stylesheet" href="datos.css">
+<style>
+  #plot{position:absolute}
+  .horizontal #plot{left:200px;right:110px;top:250px;bottom:150px}
+  .vertical #plot{left:150px;right:70px;top:330px;bottom:170px}
+  #svg{position:absolute;inset:0;overflow:visible}
+  .guia{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.14),rgba(255,255,255,.04));transform-origin:0 50%}
+  .guia.base{height:2px;background:linear-gradient(90deg,rgba(255,255,255,.35),rgba(255,255,255,.10))}
+  .yv{position:absolute;right:calc(100% + 22px);transform:translateY(-50%);font:400 23px var(--mono);color:var(--tenue);white-space:nowrap}
+  .vertical .yv{font-size:27px}
+  .xv{position:absolute;top:calc(100% + 22px);transform:translateX(-50%);font:500 24px var(--cuerpo);color:var(--tenue);white-space:nowrap}
+  .vertical .xv{font-size:28px}
+  .pv{position:absolute;transform:translate(-50%,-100%);padding:6px 14px;border-radius:12px;white-space:nowrap;
+    font-family:var(--titulos);font-weight:700;font-size:28px;color:var(--texto);
+    background:rgba(10,15,28,.55);border:1px solid var(--borde);box-shadow:0 8px 20px rgba(0,0,0,.35)}
+  .vertical .pv{font-size:32px}
+  #globo{position:absolute;padding:20px 28px;border-radius:22px;max-width:520px;
+    background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.18);
+    backdrop-filter:blur(16px);box-shadow:0 30px 60px rgba(0,0,0,.45),0 0 0 1px color-mix(in srgb,var(--acento) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.12)}
+  #globo .g1{font-family:var(--titulos);font-weight:700;font-size:36px;line-height:1.15;color:#fff}
+  #globo .g2{font:400 22px var(--mono);color:var(--acento2);margin-top:8px;letter-spacing:.02em}
+  .vertical #globo{max-width:560px} .vertical #globo .g1{font-size:42px} .vertical #globo .g2{font-size:26px}
+  #globo::before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:4px;border-radius:2px;background:var(--acento)}
+</style></head><body>
+<div id="halo"></div><div id="grano"></div>
+<div class="firma" id="firma"></div>
+<div id="cam"><div class="tarjeta vidrio" id="tarjeta">
+  <div class="cab"><div class="etiqueta" id="etq"></div><h1 id="tit"></h1></div>
+  <div id="plot"></div>
+  <div class="nota" id="pie"></div>
+</div></div>
+<script src="../base/base.js"></script><script src="datos.js"></script>
+<script>
+const DEFAULT = {
+  marca:"ejemplo", etiqueta:"WhatsApp del negocio", titulo:"Mensajes que llegaron cada semana",
+  puntos:[{etq:"4 ago",valor:41},{etq:"11 ago",valor:46},{etq:"18 ago",valor:44},{etq:"25 ago",valor:52},{etq:"1 sep",valor:57},
+          {etq:"8 sep",valor:55},{etq:"15 sep",valor:23},{etq:"22 sep",valor:18},{etq:"29 sep",valor:16},{etq:"6 oct",valor:14}],
+  pre:"", suf:"", dec:0, nota:{i:5, texto:"Aquí se apagó la pauta", sub:"y los mensajes cayeron a la mitad", zona:true},
+  valores:"clave", t0:0.8, dur:2.6, pie:"Datos de ejemplo · mensajes nuevos por semana", firma:true, camara:6, zoom:0.045
+};
+let armado = "", G = null;
+// curva monótona (no se pasa de los puntos: una caída no "rebota" por debajo de cero)
+function monotona(X, Y){
+  const n = X.length, d = [], m = new Array(n);
+  for(let i=0;i<n-1;i++) d.push((Y[i+1]-Y[i])/(X[i+1]-X[i]));
+  m[0]=d[0]; m[n-1]=d[n-2];
+  for(let i=1;i<n-1;i++) m[i] = d[i-1]*d[i] <= 0 ? 0 : (d[i-1]+d[i])/2;
+  for(let i=0;i<n-1;i++){ if(d[i]===0){ m[i]=m[i+1]=0; continue; } const a=m[i]/d[i], b=m[i+1]/d[i], s=a*a+b*b;
+    if(s>9){ const k=3/Math.sqrt(s); m[i]=k*a*d[i]; m[i+1]=k*b*d[i]; } }
+  let p = `M${X[0]},${Y[0]}`;
+  for(let i=0;i<n-1;i++){ const h=(X[i+1]-X[i])/3; p += ` C${X[i]+h},${Y[i]+m[i]*h} ${X[i+1]-h},${Y[i+1]-m[i+1]*h} ${X[i+1]},${Y[i+1]}`; }
+  const yEn = x => { let i = Math.min(n-2, Math.max(0, X.findIndex((v,k)=>k<n-1 && x<=X[k+1]))); const h=X[i+1]-X[i], s=(x-X[i])/h;
+    const h00=2*s*s*s-3*s*s+1, h10=s*s*s-2*s*s+s, h01=-2*s*s*s+3*s*s, h11=s*s*s-s*s; return h00*Y[i]+h10*h*m[i]+h01*Y[i+1]+h11*h*m[i+1]; };
+  return {p, yEn};
+}
+function armar(T, V){
+  const P = $('plot'), W = P.offsetWidth, H = P.offsetHeight, Q = T.puntos, n = Q.length;
+  const {tope, paso} = ejeBonito(Math.max(...Q.map(q=>q.valor)) * (V && T.nota ? 1.55 : 1), V?5:4);   // en vertical: aire arriba para el globo
+  const X = Q.map((q,i)=> 10 + (W-20)*i/(n-1)), Y = Q.map(q=> H*(1-q.valor/tope));
+  const c = monotona(X, Y);
+  let h = "";
+  for(let v=0; v<=tope+1e-9; v+=paso){ const y=(1-v/tope)*100;
+    h += `<div class="guia ${v===0?'base':''}" style="top:${y}%"></div><div class="yv num" style="top:${y}%">${(T.pre||'')+fmt(v)+(T.suf||'')}</div>`; }
+  const salto = Math.ceil(n / (V ? 5 : 10));
+  const ver = []; for(let i=0;i<n;i+=salto) ver.push(i);
+  if(ver[ver.length-1] !== n-1){ if(n-1-ver[ver.length-1] < salto*.75) ver.pop(); ver.push(n-1); }
+  ver.forEach(i=>{ h += `<div class="xv" id="x${i}" style="left:${X[i]}px">${Q[i].etq}</div>`; });
+  const N = T.nota;
+  const clave = new Set();
+  if(T.valores==='todos') Q.forEach((q,i)=>clave.add(i));
+  else if(T.valores!=='ninguno'){ clave.add(Q.findIndex(q=>q.valor===Math.max(...Q.map(z=>z.valor)))); clave.add(n-1); if(N) clave.add(N.i); }
+  h += `<svg id="svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+    <defs>
+      <linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--acento);stop-opacity:.42"/>
+        <stop offset=".6" style="stop-color:var(--acento);stop-opacity:.10"/><stop offset="1" style="stop-color:var(--acento);stop-opacity:0"/></linearGradient>
+      <linearGradient id="gLinea" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:var(--acento2)"/><stop offset=".5" style="stop-color:var(--acento)"/></linearGradient>
+      <pattern id="rayas" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="18" fill="rgba(255,255,255,.05)"/></pattern>
+      <clipPath id="corte"><rect id="corteR" x="-20" y="-60" width="0" height="${H+80}"/></clipPath>
+      <radialGradient id="gCabeza"><stop offset="0" style="stop-color:#fff"/><stop offset=".35" style="stop-color:var(--acento2)"/><stop offset="1" style="stop-color:var(--acento);stop-opacity:0"/></radialGradient>
+    </defs>
+    ${N && N.zona ? `<g id="zona"><rect x="${X[N.i]}" y="0" width="${W-X[N.i]+10}" height="${H}" fill="url(#rayas)"/>
+       <rect x="${X[N.i]}" y="0" width="${W-X[N.i]+10}" height="${H}" fill="rgba(0,0,0,.14)"/></g>` : ''}
+    <g clip-path="url(#corte)">
+      <path d="${c.p} L${X[n-1]},${H} L${X[0]},${H} Z" fill="url(#gArea)"/>
+      <path d="${c.p}" fill="none" stroke="var(--acento)" stroke-width="14" stroke-linecap="round" opacity=".18" style="filter:blur(8px)"/>
+      <path d="${c.p}" fill="none" stroke="url(#gLinea)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    ${N ? `<line id="nLin" x1="${X[N.i]}" y1="${Y[N.i]}" x2="${X[N.i]}" y2="${H}" stroke="rgba(255,255,255,.45)" stroke-width="2" stroke-dasharray="6 8"/>
+      <circle id="nAro" cx="${X[N.i]}" cy="${Y[N.i]}" r="20" fill="none" stroke="var(--acento)" stroke-width="3"/>
+      <path id="flecha" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path id="punta" fill="#fff"/>` : ''}
+    ${Q.map((q,i)=>`<g id="p${i}"><circle cx="${X[i]}" cy="${Y[i]}" r="11" fill="var(--fondo2)" stroke="var(--acento)" stroke-width="4"/></g>`).join('')}
+    <circle id="cabeza" r="26" fill="url(#gCabeza)"/>
+  </svg>`;
+  clave.forEach(i=>{ h += `<div class="pv num" id="pv${i}" style="left:${X[i]}px;top:${Y[i]-22}px">${(T.pre||'')+fmt(Q[i].valor,T.dec)+(T.suf||'')}</div>`; });
+  if(N) h += `<div id="globo"><div class="g1">${N.texto}</div>${N.sub?`<div class="g2">${N.sub}</div>`:''}</div>`;
+  P.innerHTML = h;
+  G = {W, H, X, Y, yEn:c.yEn, clave};
+  if(N){      // dónde va el globo: se prueban varias posiciones y gana la que no tapa la curva ni los valores
+    const g = $('globo'); g.style.maxWidth = (V ? W-20 : Math.max(340, Math.min(520, Math.max(X[N.i], W-X[N.i]) - 60)))+'px';
+    const gw = g.offsetWidth, gh = g.offsetHeight, px = X[N.i], py = Y[N.i], sep = V ? 50 : 70;
+    const cand = [];
+    for(const lx of [px+sep, px+sep*3, px-gw-sep, px-gw/2, W-gw-10, 10]) for(const ly of [0, H*.08, py-gh-140, py+110, H-gh-20, H*.5-gh/2]) cand.push([lx, ly]);
+    const choca = (gx, gy) => { let c = 0;
+      for(let x=gx-20; x<=gx+gw+20; x+=8){ if(x<X[0]||x>X[n-1]) continue; const y = c_yEn(x); if(y>gy-40 && y<gy+gh+40) c++; else if(y<gy+gh) c += .03; }
+      clave.forEach(i=>{ if(X[i]>gx-60 && X[i]<gx+gw+60 && Y[i]-80<gy+gh && Y[i]>gy-20) c += 6; });
+      return c; };
+    const c_yEn = c.yEn; let mejor = null;
+    cand.forEach(([gx,gy])=>{ gx = Math.max(10, Math.min(W-gw-10, gx)); gy = Math.max(-30, Math.min(H-gh-10, gy));
+      const d = Math.hypot(gx+gw/2-px, gy+gh/2-py), sc = choca(gx,gy)*1000 + d + (d<120?500:0);
+      if(!mejor || sc<mejor.sc) mejor = {gx, gy, sc}; });
+    const {gx, gy} = mejor; g.style.left = gx+'px'; g.style.top = gy+'px';
+    let sx, sy;                                              // la flecha sale del borde del globo más cercano al punto
+    if(px < gx){ sx = gx-10; sy = Math.max(gy+20, Math.min(gy+gh-20, py)); }
+    else if(px > gx+gw){ sx = gx+gw+10; sy = Math.max(gy+20, Math.min(gy+gh-20, py)); }
+    else { sx = px + (px > gx+gw/2 ? -40 : 40); sy = py < gy ? gy-10 : gy+gh+10; }
+    const dx = px-sx, dy = py-sy, L0 = Math.hypot(dx,dy), ex = px - dx/L0*26, ey = py - dy/L0*26;
+    const cx = (sx+ex)/2 - dy/L0*40, cy = (sy+ey)/2 + dx/L0*40;
+    $('flecha').setAttribute('d', `M${sx},${sy} Q${cx},${cy} ${ex},${ey}`);
+    const ang = Math.atan2(ey-cy, ex-cx), L=18;
+    $('punta').setAttribute('d', `M${ex},${ey} L${ex-L*Math.cos(ang-.45)},${ey-L*Math.sin(ang-.45)} L${ex-L*Math.cos(ang+.45)},${ey-L*Math.sin(ang+.45)} Z`);
+    const fl = $('flecha'), len = fl.getTotalLength(); fl.style.strokeDasharray = len; G.lenF = len;
+  }
+}
+function render(t, T, escena){
+  T = Object.assign({}, DEFAULT, T); marca(T); t_global = t; firma(T);
+  const V = vertical(), Q = T.puntos, n = Q.length, N = T.nota;
+  $('etq').textContent = T.etiqueta || ''; $('etq').style.display = T.etiqueta ? '' : 'none';
+  $('tit').textContent = T.titulo; $('pie').textContent = T.pie || '';
+  const clave = JSON.stringify([Q, N, T.pre, T.suf, T.valores, V, T.marca, document.fonts.status]); if(clave !== armado){ armar(T, V); armado = clave; }
+  empuje(t, T); entraTarjeta($('tarjeta'), t);
+  entra($('etq'), t, .25, .5, 16); entra($('tit'), t, .32, .55, 24); $('pie').style.opacity = .85*prog(t, T.t0+T.dur, .6);
+  const P = $('plot');
+  P.querySelectorAll('.guia').forEach((g,k)=>{ g.style.transform = `scaleX(${prog(t, .45 + .06*k, .7)})`; });
+  P.querySelectorAll('.yv').forEach((g,k)=>{ g.style.opacity = .8*prog(t, .55 + .06*k, .5); });
+  // avance del trazo
+  const p = suave((t - T.t0)/T.dur), tipX = G.X[0] + p*(G.X[n-1]-G.X[0]);
+  $('corteR').setAttribute('width', p>0 ? tipX + 20 : 0);
+  const cab = $('cabeza'); cab.setAttribute('cx', tipX); cab.setAttribute('cy', G.yEn(tipX));
+  cab.style.opacity = p<=0 ? 0 : p<1 ? 1 : 1 - prog(t, T.t0+T.dur, .4);
+  const cuando = i => T.t0 + T.dur * invSuave((G.X[i]-G.X[0])/(G.X[n-1]-G.X[0]));   // segundo en que la línea pasa por el punto i
+  Q.forEach((q,i)=>{
+    const a = cuando(i), r = resorte(t, a-.02, .4), g = $('p'+i);
+    g.style.transformOrigin = `${G.X[i]}px ${G.Y[i]}px`; g.style.transform = `scale(${Math.max(r,0)})`; g.style.opacity = r>0?1:0;
+    const x = $('x'+i); if(x) x.style.opacity = prog(t, a-.25, .4);
+    const pv = $('pv'+i); if(pv){ const k = prog(t, a+.05, .35); pv.style.opacity = k; pv.style.transform = `translate(-50%,${-100 - 25*(1-k)}%)`; }
+  });
+  if(N){
+    const a = cuando(N.i) + .15;
+    const z = $('zona'); if(z) z.style.opacity = prog(t, a+.1, .6);
+    const ln = $('nLin'); ln.style.opacity = prog(t, a, .3); ln.setAttribute('y2', G.Y[N.i] + (G.H-G.Y[N.i])*prog(t, a, .5));
+    const aro = $('nAro'), f = Math.max(0, t-a)%1.4/1.4; aro.setAttribute('r', 14 + 26*f); aro.style.opacity = t<a ? 0 : (1-f)*.9;
+    const gk = resorte(t, a+.1, .55), gp = prog(t, a+.1, .4), gl = $('globo');
+    gl.style.opacity = gp; gl.style.transform = `translateY(${24*(1-gk)}px) scale(${.92+.08*gk})`;
+    const fk = prog(t, a+.35, .45); $('flecha').style.strokeDashoffset = G.lenF*(1-fk); $('punta').style.opacity = prog(t, a+.7, .15);
+  }
+}
+// inversa de suave(): en qué fracción del tiempo el trazo llega a la fracción x del ancho
+function invSuave(x){ let a=0, b=1; for(let k=0;k<30;k++){ const m=(a+b)/2; if(suave(m)<x) a=m; else b=m; } return (a+b)/2; }
+</script></body></html>

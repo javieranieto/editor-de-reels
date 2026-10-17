@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- PANEL a pantalla completa del banco (14-oct-2026): la frase que ES la idea del video («No gana el mejor…»).
+Sube desde abajo sobre el video, se queda y baja. Fondo TRANSPARENTE fuera del panel: capturar con --alfa.
+T = {
+  marca: id de recursos/marcas/ (por defecto "ejemplo"),
+  t_in, t_out:  sube y baja (s).   final: true = no baja (el panel que cierra el video)
+  etiqueta: "La regla de este video"           (mono, arriba)
+  lineas: [{txt, t, estilo, tam, tachar, golpe}]
+     estilo: "tenue" | "blanco" | "acento";  tam: px (por defecto 96 en 16:9);  tachar: segundo en que se tacha;
+     golpe: true = entra grande y se asienta (resorte)
+  pie: {txt, t}   (opcional, chico abajo)
+  icono: {nombre, t, loop}   (opcional) ícono animado grande a la derecha
+  t2, etiqueta2, lineas2, pie2: SEGUNDO contenido — en t2 el primero se desvanece y entra este (el panel no baja).
+                  Sirve para el cierre: «tu tarea» y luego «en el siguiente video», sin cortar un panel contra otro.
+}
+Lo que lo hace profesional: degradado de la marca con un brillo que se mueve despacio, filo de acento al subir, texto con
+entrada escalonada y desenfoque que se aclara, el tachado se DIBUJA, y la línea con «golpe» cae y se asienta. -->
+<link rel="stylesheet" href="../base/base.css">
+<style>
+  #pn{position:absolute;left:0;right:0;bottom:0;overflow:hidden;
+      background:radial-gradient(ellipse 80% 90% at 30% 35%,var(--fondo1) 0%,var(--fondo2) 60%,var(--fondo3) 100%)}
+  #brillo{position:absolute;width:900px;height:900px;border-radius:50%;filter:blur(40px);
+          background:radial-gradient(circle,color-mix(in srgb,var(--acento) 18%,transparent),transparent 65%)}
+  #filo{position:absolute;left:0;right:0;top:0;height:10px;background:var(--acento)}
+  #contenido{position:absolute;left:8.3vw;right:8vw}
+  #fi{position:absolute;left:8.3vw;top:6.5vh;font:500 26px var(--mono);color:var(--tenue);letter-spacing:.06em}
+  #et{position:absolute;left:8.3vw;top:13vh;font:500 34px var(--mono);color:var(--tenue);letter-spacing:.08em;text-transform:uppercase}
+  .ln{position:relative;font-family:var(--titulos);font-weight:700;line-height:1.12;white-space:pre-line;width:fit-content;max-width:100%}
+  .ln .raya{position:absolute;left:-1%;top:52%;height:.09em;background:var(--acento);border-radius:6px}
+  #pie{position:absolute;left:8.3vw;bottom:9vh;font:600 40px var(--cuerpo);color:var(--tenue)}
+  .vertical #contenido{left:7vw;right:7vw} .vertical #fi,.vertical #et,.vertical #pie{left:7vw}
+</style></head><body class="alfa">
+<div id="pn"><div id="brillo"></div><div id="fi"></div><div id="et"></div><div id="contenido"></div><div id="pie"></div><div id="icono" style="position:absolute;width:380px;height:380px"></div><div id="filo"></div></div>
+<script src="../base/base.js"></script><script src="../base/lottie.min.js"></script><script src="../iconos/iconos.js"></script><script src="../iconos/en_escena.js"></script>
+<script>
+const DEFAULT = {marca:"ejemplo", t_in:0.2, t_out:5.0, final:false, etiqueta:"La regla de este video",
+  lineas:[{txt:"No gana el mejor.", t:0.6, estilo:"tenue"}, {txt:"Gana el que contesta primero", t:1.8, estilo:"blanco", tam:84},
+          {txt:"con algo útil.", t:3.0, estilo:"acento", tam:84, golpe:true}], pie:null};
+function render(t, T){
+  T = Object.assign({}, DEFAULT, T); marca(T);
+  const V = vertical(), W = innerWidth, H = innerHeight, css = getComputedStyle(document.body);
+  let alto = prog(t, T.t_in, 0.4); if (!T.final && t > T.t_out) alto = 1 - prog(t, T.t_out, 0.35);
+  if (t < T.t_in) alto = 0;
+  const pn = $('pn'); pn.style.height = (H * alto) + 'px';
+  $('filo').style.opacity = (alto > 0 && alto < 1) ? 1 : 0;
+  // todo el contenido vive pegado al fondo de la pantalla: el panel lo DESCUBRE al subir
+  const off = H * (1 - alto);
+  $('brillo').style.left = (W*0.15 + 160*Math.sin(t*0.5)) + 'px'; $('brillo').style.top = (H*0.1 + 80*Math.cos(t*0.4) - off) + 'px';
+  $('fi').textContent =firmaMarca(T);
+  $('fi').style.top = (H*0.065 - off) + 'px';
+  $('et').textContent = T.etiqueta || ''; $('et').style.top = (H*0.13 - off) + 'px';
+  { const ic = $('icono'); ic.style.right = (W*0.07)+'px'; ic.style.top = (H*0.5 - 190 - off)+'px'; pintaIcono(ic, t, T.icono, T.marca); }
+  const col = {tenue: css.getPropertyValue('--tenue'), blanco: css.getPropertyValue('--texto'), acento: css.getPropertyValue('--acento')};
+  let fade = 1;
+  if (T.t2 != null && t >= T.t2 - 0.35){                // cambio de contenido a la mitad, sin bajar el panel
+    if (t < T.t2) fade = 1 - prog(t, T.t2 - 0.35, 0.3);
+    else T = Object.assign({}, T, {etiqueta: T.etiqueta2 || T.etiqueta, lineas: T.lineas2 || [], pie: T.pie2 || null});
+    $('et').textContent = T.etiqueta || '';
+  }
+  const c = $('contenido'); c.style.top = (H*(V ? 0.26 : 0.30) - off) + 'px'; c.style.opacity = fade;
+  c.style.right = T.icono ? (W*0.07 + 420) + 'px' : '8vw';   // con ícono, el texto le deja su columna
+  let html = '';
+  (T.lineas || []).forEach(l => {
+    const e = prog(t, l.t - 0.12, 0.35); if (e <= 0) { html += `<div class="ln" style="visibility:hidden;font-size:${(l.tam||96)*(V?1.0:1)}px">${l.txt}</div>`; return; }
+    let tam = (l.tam || 96) * (V ? 1.0 : 1), esc = 1, blur = 6*(1-e);
+    if (l.golpe){ const r = resorte(t, l.t - 0.08, 0.45); esc = 1.5 - 0.5*Math.min(1, r); }
+    const raya = l.tachar != null ? `<span class="raya" style="width:${102*prog(t, l.tachar, 0.3)}%"></span>` : '';
+    html += `<div class="ln" style="font-size:${tam}px;color:${col[l.estilo||'blanco']};opacity:${e};filter:blur(${blur}px);
+      transform:translateY(${26*(1-e)}px) scale(${esc});transform-origin:left center;margin-bottom:${tam*0.28}px">${l.txt}${raya}</div>`;
+  });
+  c.innerHTML = html;
+  const p = $('pie'); if (T.pie){ p.textContent = T.pie.txt; p.style.opacity = prog(t, T.pie.t, 0.4); p.style.bottom = (H*0.09) + 'px'; } else p.textContent = '';
+}
+</script></body></html>

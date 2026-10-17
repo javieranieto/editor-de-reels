@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ESCENA «mapa» (14-oct-2026). Un mapa de calles genérico (dibujado aquí en SVG: manzanas, calles con nombres
+ficticios, un parque y un arroyo). Los pines caen con rebote; el del negocio destacado crece y abre su tarjeta
+(nombre, estrellas, «Abierto · cierra 8 p.m.», Cómo llegar / Llamar); luego se dibuja la ruta desde «tu ubicación»
+con su «12 min». 16:9 = ventana de navegador con tarjeta flotante; 9:16 = teléfono con hoja que sube desde abajo.
+Estilo reconocible de mapa, SIN logos ni nombres de terceros. Negocios FICTICIOS.
+
+Campos de T (todos opcionales; se mezclan con DEFAULT):
+  marca       id de recursos/marcas/ (por defecto "ejemplo")            colores y firma          firma   false o un texto propio
+  busqueda    texto de la caja de búsqueda            "taller mecánico"
+  tPines      segundo en que empiezan a caer los pines           0.3
+  tDestacado  segundo en que se toca el pin destacado (crece, se acerca el mapa)   1.5
+  tTarjeta    segundo en que abre su tarjeta                     1.9
+  tRuta       segundo en que se dibuja la ruta (null = sin ruta)  3.3
+  destacado   {nombre, cal, resenas, tipo, precio, horario, dir, abierto}   el negocio
+  otros       nombres de los otros pines (hasta 4)
+  minutos     texto del tiempo de la ruta                         "12 min"
+  distancia   texto de la distancia                               "3.1 km"
+  hora        hora del teléfono                                   "10:24"
+Ejemplo:  --T '{"busqueda":"cerrajero","destacado":{"nombre":"Cerrajería 24 h Centro","cal":4.9,"resenas":212,"tipo":"Cerrajero","horario":"Abierto las 24 horas"},"minutos":"8 min"}'
+-->
+<link rel="stylesheet" href="../base/base.css">
+<link rel="stylesheet" href="web.css">
+<style>
+  #pantalla{background:#ece8e0}
+  #mundo{position:absolute;left:0;top:0;width:1800px;height:1600px;transform-origin:0 0}
+  #mundo svg{position:absolute;left:0;top:0}
+  .pin{position:absolute;width:30px;height:42px;margin:-40px 0 0 -15px;transform-origin:15px 40px}
+  .pin .som{position:absolute;left:7px;top:36px;width:16px;height:6px;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(1.5px)}
+  .pin svg{position:relative;display:block}
+  .pin .eti{position:absolute;left:34px;top:6px;font:600 13px var(--ui);color:#b3261e;white-space:nowrap;
+    text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 4px #fff,0 0 4px #fff}
+  .pin.dest .eti{left:50%;top:46px;transform:translateX(-50%);font-size:15px;font-weight:700;color:#202124}
+  #yo{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  #halo{position:absolute;border-radius:50%;background:rgba(26,115,232,.18)}
+  #chip{position:absolute;display:flex;align-items:center;gap:7px;background:#fff;border-radius:10px;padding:7px 12px;
+    box-shadow:0 2px 8px rgba(0,0,0,.3);font:600 16px var(--ui);color:#202124;white-space:nowrap;transform-origin:0 100%}
+  #chip small{font-weight:400;color:#5f6368;font-size:14px}
+  /* buscador flotante */
+  #caja{position:absolute;background:#fff;display:flex;align-items:center;gap:12px;font-size:16px;color:#202124;z-index:6;
+    box-shadow:0 2px 6px rgba(0,0,0,.25);border-radius:24px;padding:0 18px;white-space:nowrap}
+  .horizontal #caja{left:22px;top:18px;width:400px;height:48px}
+  .vertical #caja{left:12px;right:12px;top:58px;height:50px}
+  #chips{position:absolute;display:flex;gap:8px;z-index:6;white-space:nowrap}
+  .horizontal #chips{left:440px;top:24px} .vertical #chips{left:12px;top:118px}
+  #chips span{background:#fff;border-radius:16px;padding:7px 14px;font-size:14px;color:#3c4043;box-shadow:0 1px 4px rgba(0,0,0,.22)}
+  #zoom{position:absolute;right:20px;bottom:30px;width:40px;border-radius:8px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:6;
+    font:400 24px var(--ui);color:#5f6368;text-align:center}
+  #zoom div{height:40px;line-height:40px} #zoom div+div{border-top:1px solid #e3e3e3}
+  .vertical #zoom{display:none}
+  #escala{position:absolute;right:76px;bottom:32px;font:12px var(--ui);color:#3c4043;z-index:6;text-align:right}
+  #escala i{display:block;width:80px;height:6px;border:2px solid #3c4043;border-top:none;margin-top:2px}
+  .vertical #escala{display:none}
+  /* tarjeta (navegador) y hoja (teléfono) */
+  #tarjeta{position:absolute;z-index:8;background:#fff;color:#202124;overflow:hidden}
+  .horizontal #tarjeta{width:380px;border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.30),0 2px 6px rgba(0,0,0,.18);transform-origin:0 50%}
+  .vertical #tarjeta{left:0;right:0;bottom:0;border-radius:22px 22px 0 0;box-shadow:0 -6px 22px rgba(0,0,0,.22)}
+  #tarjeta .asa{width:38px;height:5px;border-radius:3px;background:#dadce0;margin:10px auto 2px}
+  .horizontal #tarjeta .asa{display:none}
+  #tarjeta .cuerpo{padding:14px 18px 16px}
+  #tarjeta .nom{font-size:22px;font-weight:600;line-height:1.25}
+  #tarjeta .lin{font-size:15px;color:#5f6368;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #tarjeta .cal{color:#202124}
+  #tarjeta .ab{color:var(--abierto);font-weight:600} #tarjeta .ce{color:var(--cerrado);font-weight:600}
+  .bots{display:flex;gap:8px;margin-top:14px}
+  .bot{display:flex;align-items:center;gap:6px;border:1px solid #dadce0;border-radius:18px;padding:7px 13px;font-size:14px;font-weight:600;color:#1a73e8;white-space:nowrap}
+  .bot.lleno{background:#1a73e8;border-color:#1a73e8;color:#fff}
+  #ruta{display:flex;align-items:center;justify-content:space-between;padding:6px 18px 18px}
+  #ruta .min{font-size:24px;font-weight:700;color:#188038} #ruta .min small{font-size:17px;color:#5f6368;font-weight:400}
+  #ruta .sub{font-size:14px;color:#5f6368;margin-top:2px}
+</style></head><body>
+<div class="firma" id="firma"></div>
+<div id="escena"><div id="disp"><div id="pantalla">
+  <div id="mundo"><svg id="calles" width="1800" height="1600"></svg>
+    <svg id="trazo" width="1800" height="1600"></svg>
+    <div id="halo"></div><div id="yo"></div><div id="pines"></div><div id="chip"></div></div>
+  <div id="caja"><svg width="18" height="18" viewBox="0 0 24 24" style="flex:none"><circle cx="10" cy="10" r="6.5" stroke="#5f6368" stroke-width="2.2" fill="none"/><path d="M15 15l5 5" stroke="#5f6368" stroke-width="2.2" stroke-linecap="round"/></svg><span id="q" style="flex:1"></span><span style="color:#5f6368;font-size:20px">✕</span></div>
+  <div id="chips"><span>Abierto ahora</span><span>Mejor calificados</span><span>Precio</span><span>Más filtros</span></div>
+  <div id="zoom"><div>+</div><div>−</div></div><div id="escala">200 m<i></i></div>
+  <div id="tarjeta"></div>
+  <div id="dedo" class="toque"></div>
+</div></div></div>
+<script src="../base/base.js"></script>
+<script src="web.js"></script>
+<script>
+const DEFAULT = {
+  marca:"ejemplo", busqueda:"taller mecánico", tPines:0.3, tDestacado:1.5, tTarjeta:1.9, tRuta:3.3, minutos:"12 min", distancia:"3.1 km", hora:"10:24",
+  destacado:{nombre:"Taller Mecánico El Pistón", cal:4.8, resenas:175, tipo:"Taller mecánico", precio:"$$", horario:"cierra 8 p.m.",
+             dir:"Av. Hidalgo 245, Col. Centro", abierto:true},
+  otros:["Servicio Automotriz Rivera","Mecánica Express Norte","Taller Hermanos Garza","Frenos y Clutch Centro"],
+};
+// ---- el mapa (coordenadas del «mundo», 1800x1600 px)
+const XS = [110, 320, 520, 700, 905, 1085, 1290, 1480, 1690], YS = [95, 255, 430, 600, 765, 935, 1105, 1275, 1445];
+const PRINC_X = 700, PRINC_Y = 600;                       // avenidas principales (más anchas, amarillas)
+const PINES = [[985, 588], [560, 338], [1340, 852], [420, 815], [1215, 495]];   // [0] = destacado
+const YO = [520, 1010];
+const RUTA = [[520,1010],[520,765],[700,765],[700,600],[985,600]];
+function semilla(n){ let s = n; return () => (s = (s*16807) % 2147483647) / 2147483647; }
+function dibujarMapa(){
+  const r = semilla(7); let h = '<rect width="1800" height="1600" fill="#ece8e0"/>';
+  // edificios: rectángulos un poco más oscuros dentro de cada manzana (la textura que hace «mapa»)
+  for (let i = 0; i < XS.length-1; i++) for (let j = 0; j < YS.length-1; j++){
+    const x0 = XS[i]+14, x1 = XS[i+1]-14, y0 = YS[j]+14, y1 = YS[j+1]-14;
+    if (i===4 && j===1) continue;                           // aquí va el parque
+    let x = x0; while (x < x1-20){ const w = 26 + r()*44; const hh = (y1-y0)*(0.28+r()*0.2);
+      if (x + w > x1) break; h += `<rect x="${x.toFixed(0)}" y="${y0}" width="${w.toFixed(0)}" height="${hh.toFixed(0)}" rx="2" fill="#e2ded5"/>`;
+      h += `<rect x="${x.toFixed(0)}" y="${(y1-hh*0.9).toFixed(0)}" width="${(w*0.9).toFixed(0)}" height="${(hh*0.9).toFixed(0)}" rx="2" fill="#e2ded5"/>`; x += w + 6 + r()*10; }
+  }
+  // parque y arroyo
+  h += `<rect x="${XS[4]+8}" y="${YS[1]+8}" width="${XS[5]-XS[4]-16}" height="${YS[2]-YS[1]-16}" rx="10" fill="#c3e5bd"/>`;
+  h += `<circle cx="960" cy="320" r="7" fill="#9fd394"/><circle cx="1020" cy="370" r="9" fill="#9fd394"/><circle cx="945" cy="390" r="6" fill="#9fd394"/>`;
+  h += `<path d="M1180 -10 C1230 120 1330 170 1440 230 S1640 330 1820 380 L1820 470 C1620 420 1510 360 1400 300 S1180 150 1120 -10z" fill="#a9d2f3"/>`;
+  // calles: borde gris + relleno blanco; avenidas principales amarillas; una diagonal
+  const calle = (d, w, c) => `<path d="${d}" stroke="#d4d0c8" stroke-width="${w+3}" fill="none" stroke-linecap="round"/><path d="${d}" stroke="${c}" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
+  let grises = '', amarillas = '';
+  XS.forEach(x => { const d = `M${x} 0V1600`; if (x === PRINC_X) amarillas += calle(d, 16, '#fde7a1'); else grises += calle(d, 10, '#fff'); });
+  YS.forEach(y => { const d = `M0 ${y}H1800`; if (y === PRINC_Y) amarillas += calle(d, 16, '#fde7a1'); else grises += calle(d, 10, '#fff'); });
+  amarillas += calle('M0 1500 L1800 180', 14, '#fff');
+  h += grises + amarillas;
+  // puentes sobre el arroyo
+  // nombres de calles (gris, como en cualquier mapa)
+  const nom = (x, y, txt, rot=0, tam=13) => `<text x="${x}" y="${y}" transform="rotate(${rot} ${x} ${y})" font-family="Segoe UI,Roboto,Arial" font-size="${tam}" fill="#5f6368" text-anchor="middle" stroke="#fff" stroke-width="3" paint-order="stroke">${txt}</text>`;
+  h += nom(PRINC_X+5, 180, 'Av. Hidalgo', 90, 14) + nom(PRINC_X+5, 1020, 'Av. Hidalgo', 90, 14);
+  h += nom(380, PRINC_Y+5, 'Blvd. Las Palmas', 0, 14) + nom(1390, PRINC_Y+5, 'Blvd. Las Palmas', 0, 14);
+  h += nom(1000, YS[4]+4, 'Calle Morelos') + nom(260, YS[2]+4, 'Calle Allende') + nom(1180, YS[5]+4, 'Calle Zaragoza');
+  h += nom(XS[2]+4, 520, 'Calle Juárez', 90) + nom(XS[6]+4, 690, 'Calle Abasolo', 90) + nom(XS[1]+4, 860, 'Calle Victoria', 90);
+  h += nom(1500, 394, 'Av. Constitución', -36.25, 14) + nom(330, 1250, 'Av. Constitución', -36.25, 14);
+  h += `<text x="995" y="348" font-family="Segoe UI,Roboto,Arial" font-size="14" font-weight="600" fill="#2e7d32" text-anchor="middle">Parque Los Fresnos</text>`;
+  h += `<text x="1480" y="290" transform="rotate(28 1480 290)" font-family="Segoe UI,Roboto,Arial" font-size="14" font-style="italic" fill="#3b78b0" text-anchor="middle">Arroyo El Sauce</text>`;
+  // lugares de referencia genéricos (gris)
+  const lugar = (x, y, txt, c) => `<circle cx="${x}" cy="${y}" r="8" fill="${c}" stroke="#fff" stroke-width="2"/><text x="${x+14}" y="${y+5}" font-family="Segoe UI,Roboto,Arial" font-size="12" fill="${c}" stroke="#fff" stroke-width="3" paint-order="stroke">${txt}</text>`;
+  h += lugar(800, 690, 'Farmacia', '#5e8e3e') + lugar(370, 520, 'Escuela Primaria', '#7a6a58') + lugar(1130, 1020, 'Gasolinera', '#3f74c5') + lugar(1560, 700, 'Mercado municipal', '#c1693a') + lugar(980, 1360, 'Centro de salud', '#c5463b') + lugar(1420, 1190, 'Iglesia', '#7a6a58');
+  $('calles').innerHTML = h;
+}
+const PIN = (c, borde) => `<svg width="30" height="42" viewBox="0 0 26 36"><path d="M13 35s11-12.4 11-21.2A11 11 0 0 0 2 13.8C2 22.6 13 35 13 35z" fill="${c}" stroke="${borde}" stroke-width="1.2"/><circle cx="13" cy="13.5" r="4.3" fill="#fff"/></svg>`;
+const IC = {
+  ruta:'<svg width="16" height="16" viewBox="0 0 24 24"><path d="M12 2l10 10-10 10L2 12z" fill="currentColor"/><path d="M9 15v-3h5V9.5l3 3-3 3V13h-3v2z" fill="#1a73e8"/></svg>',
+  tel:'<svg width="15" height="15" viewBox="0 0 24 24"><path fill="currentColor" d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>',
+  guar:'<svg width="14" height="15" viewBox="0 0 20 24"><path d="M3 2h14v20l-7-5-7 5z" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linejoin="round"/></svg>',
+  comp:'<svg width="15" height="15" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" fill="currentColor"/><circle cx="6" cy="12" r="3" fill="currentColor"/><circle cx="18" cy="19" r="3" fill="currentColor"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4" stroke="currentColor" stroke-width="2"/></svg>',
+  auto:'<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#1a73e8" d="M18.9 6c-.2-.6-.8-1-1.4-1h-11c-.7 0-1.2.4-1.4 1L3 12v8c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-1h12v1c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-8l-2.1-6zM6.5 16c-.8 0-1.5-.7-1.5-1.5S5.7 13 6.5 13s1.5.7 1.5 1.5S7.3 16 6.5 16zm11 0c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>'};
+
+let armado = false;
+function render(t, T, escena){
+  T = Object.assign({}, DEFAULT, T || {});
+  const D = Object.assign({}, DEFAULT.destacado, T.destacado || {});
+  montar(T, {titulo: `${T.busqueda} - Mapa`, omni: esc(T.busqueda + ' · mapa'), fav:'#34a853', hora:T.hora});
+  if (!armado){ dibujarMapa(); armado = true; }
+  const V = vertical(), pant = $('pantalla'), PW = pant.offsetWidth, PH = pant.offsetHeight;
+  $('q').textContent = T.busqueda;
+  const acento = getComputedStyle(document.body).getPropertyValue('--acento').trim();
+  const hayRuta = T.tRuta != null;
+
+  const kRuta = hayRuta ? prog(t, T.tRuta, 1.1) : 0;
+  // ---- vistas del mapa: general -> el destacado -> la ruta completa (z, foco del mundo, ancla en pantalla)
+  const tarjH = V ? (kRuta > 0 ? 196 : 330) : 0;
+  const vis0 = {z: V ? 0.56 : 0.80, fx: 900, fy: V ? 700 : 640, ax: PW/2, ay: PH/2 + (V ? 40 : 20)};
+  const vis1 = {z: V ? 1.0 : 1.15, fx: PINES[0][0], fy: PINES[0][1], ax: V ? PW/2 : PW*0.40, ay: V ? 300 : PH*0.52};
+  // la ruta completa cabe en el área libre (en teléfono, arriba de la hoja; en navegador, a la izquierda de la tarjeta)
+  const bx0 = V ? 390 : 500, bx1 = V ? 1160 : 1000, by0 = 520, by1 = 1030;
+  const area = V ? {x0:16, x1:PW-140, y0:170, y1:PH-196-20} : {x0:120, x1:PW*0.62, y0:110, y1:PH-50};
+  const zr = Math.min((area.x1-area.x0)/(bx1-bx0), (area.y1-area.y0)/(by1-by0), 1.15);
+  const vis2 = {z: zr, fx: (bx0+bx1)/2, fy: (by0+by1)/2, ax: (area.x0+area.x1)/2, ay: (area.y0+area.y1)/2};
+  const k1 = eio((t - T.tDestacado)/1.0), k2 = hayRuta ? eio((t - (T.tRuta - 0.4))/1.0) : 0;
+  const mez = (p, a, b, c) => entre(entre(a[p], b[p], k1), c[p], k2);
+  const z = mez('z', vis0, vis1, vis2), fx = mez('fx', vis0, vis1, vis2), fy = mez('fy', vis0, vis1, vis2);
+  const ax = mez('ax', vis0, vis1, vis2), ay = mez('ay', vis0, vis1, vis2);
+  const tx = ax - fx*z, ty = ay - fy*z;
+  $('mundo').style.transform = `translate(${tx}px, ${ty}px) scale(${z})`;
+  const pinX = tx + PINES[0][0]*z, pinY = ty + PINES[0][1]*z;      // dónde quedó el pin destacado en la pantalla
+  // ---- ruta (se dibuja) y su chip de tiempo
+  let largo = 0; for (let i = 1; i < RUTA.length; i++) largo += Math.hypot(RUTA[i][0]-RUTA[i-1][0], RUTA[i][1]-RUTA[i-1][1]);
+  const d = 'M' + RUTA.map(p => p.join(' ')).join('L');
+  $('trazo').innerHTML = kRuta > 0 ? `<path d="${d}" stroke="#1557b0" stroke-width="13" fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="${largo}" stroke-dashoffset="${largo*(1-kRuta)}"/>
+     <path d="${d}" stroke="#4c8df6" stroke-width="8" fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="${largo}" stroke-dashoffset="${largo*(1-kRuta)}"/>` : '';
+  const kc = hayRuta ? resorte(t, T.tRuta + 0.9, 0.45) : 0, chip = $('chip');
+  chip.innerHTML = `${IC.auto}${esc(T.minutos)} <small>${esc(T.distancia)}</small>`;
+  chip.style.left = '540px'; chip.style.top = '850px'; chip.style.opacity = Math.min(1, kc*3); chip.style.transform = `scale(${kc/z})`;
+  // ---- tu ubicación (late)
+  const f = (t*0.8) % 1, rh = (14 + 26*f)/z;   // pines, chip y tu ubicación conservan su tamaño aunque el mapa se acerque
+  $('yo').style.left = YO[0]+'px'; $('yo').style.top = YO[1]+'px'; $('yo').style.transform = `scale(${1/z})`;
+  Object.assign($('halo').style, {left:(YO[0]-rh)+'px', top:(YO[1]-rh)+'px', width:2*rh+'px', height:2*rh+'px', opacity:1-f});
+
+  // ---- pines: caen con rebote; el destacado crece y se pinta con el acento
+  const kD = prog(t, T.tDestacado, 0.45);
+  const nombres = [D.nombre, ...T.otros];
+  let ph = '';
+  PINES.forEach((p, i) => {
+    if (i >= nombres.length) return;
+    const a = T.tPines + 0.13*[2,0,3,1,4][i], r = resorte(t, a, 0.55), op = t < a ? 0 : Math.min(1, (t-a)/0.1);
+    const dest = i === 0, s = dest ? 1 + 0.55*kD : 1 - 0.12*kD;
+    const col = dest && kD > 0.02 ? acento : '#ea4335';
+    const eti = dest ? (kD > 0.05 ? `<span class="eti" style="opacity:${kD}">${esc(D.nombre)}</span>` : (V ? '' : `<span class="eti" style="left:34px;top:6px;transform:none;font-size:13px;color:#b3261e">${esc(D.nombre)}</span>`))
+                     : (V ? '' : `<span class="eti" style="opacity:${1-0.5*kD}">${esc(nombres[i])}</span>`);
+    ph += `<div class="pin ${dest?'dest':''}" style="left:${p[0]}px;top:${p[1]}px;opacity:${op*(dest?1:1-0.35*kD)};z-index:${dest?5:1};
+      transform:translateY(${-90*(1-r)/z}px) scale(${s/z})"><div class="som" style="opacity:${r}"></div>${PIN(col, 'rgba(0,0,0,.25)')}${eti}</div>`;
+  });
+  $('pines').innerHTML = ph;
+
+  $('escala').innerHTML = (z > 0.9 ? '100 m' : z > 0.6 ? '200 m' : '500 m') + '<i></i>';
+
+  // ---- tarjeta (navegador: flota junto al pin) / hoja (teléfono: sube desde abajo)
+  const kT = prog(t, T.tTarjeta, 0.45), tj = $('tarjeta');
+  const cuerpo = `<div class="nom">${esc(D.nombre)}</div>
+     <div class="lin"><span class="cal">${D.cal.toFixed(1)}</span> ${estrellas(D.cal, 15)} (${D.resenas})</div>
+     <div class="lin">${esc(D.tipo)} · ${esc(D.precio)}</div>
+     <div class="lin"><span class="${D.abierto?'ab':'ce'}">${D.abierto?'Abierto':'Cerrado'}</span> · ${esc(D.horario)}</div>`;
+  const bots = `<div class="bots"><span class="bot lleno">${IC.ruta}Cómo llegar</span><span class="bot">${IC.tel}Llamar</span>
+     <span class="bot">${IC.guar}Guardar</span>${V ? '' : `<span class="bot">${IC.comp}</span>`}</div>`;
+  const resumen = `<div id="ruta"><div><div class="min">${esc(T.minutos)} <small>(${esc(T.distancia)})</small></div><div class="sub">Ruta más rápida · tráfico normal</div></div>
+     <span class="bot lleno" style="padding:9px 18px;font-size:15px">Iniciar</span></div>`;
+  if (V){
+    const enRuta = kRuta > 0;
+    tj.innerHTML = `<div class="asa"></div>` + (enRuta ? `<div class="cuerpo" style="padding-bottom:4px"><div class="nom" style="font-size:19px">${esc(D.nombre)}</div></div>${resumen}`
+                                                     : `<div class="cuerpo">${cuerpo}${bots}<div class="lin" style="margin-top:12px">📍 ${esc(D.dir)}</div></div>`);
+    tj.style.height = tarjH + 'px';
+    tj.style.transform = `translateY(${(1-kT)*(tarjH+30)}px)`; tj.style.display = kT > 0 ? '' : 'none';
+  } else {
+    tj.innerHTML = `<div class="cuerpo">${cuerpo}${bots}</div>` + (kRuta > 0 ? `<div style="border-top:1px solid #ebebeb;opacity:${prog(t,T.tRuta+0.6,0.4)}">${resumen.replace('id="ruta"','id="ruta" style="padding-top:12px"')}</div>` : '');
+    tj.style.left = (pinX + 175) + 'px'; tj.style.top = Math.max(84, pinY - 150) + 'px';
+    tj.style.opacity = kT; tj.style.transform = `scale(${0.85 + 0.15*kT})`; tj.style.display = kT > 0 ? '' : 'none';
+  }
+
+  // ---- cámara del dispositivo
+  if (V) camino(t, [[0, 1.25], [T.tDestacado, 1.27], [T.tTarjeta + 0.6, 1.42, 215, 14 + 470, 540, 690],
+                    ...(hayRuta ? [[T.tRuta - 0.2, 1.42, 215, 14 + 470, 540, 690], [T.tRuta + 0.8, 1.45, 215, 14 + 450, 540, 680]] : [])]);
+  else camino(t, [[0, 0.86], [T.tDestacado, 0.88], [T.tTarjeta + 0.6, 1.30, pinX + 250, 86 + pinY - 10],
+                  ...(hayRuta ? [[T.tRuta - 0.2, 1.30, pinX + 250, 86 + pinY - 10], [T.tRuta + 0.9, 1.18, 820, 520]] : [])]);
+  girar(t, (hayRuta ? T.tRuta : T.tTarjeta) + 1.5, golpeEn(t, T.tDestacado));
+
+  // ---- clic / toque sobre el pin destacado
+  const kc2 = t >= T.tDestacado - 0.1 ? Math.min(1, (t - T.tDestacado + 0.1)/0.45) : 0;
+  const km = eio((t - (T.tDestacado - 0.9)) / 0.75);
+  cursor(entre(PW*0.75, pinX + 2, km), entre(PH*0.85 + 86, 86 + pinY - 18, km), kc2, prog(t, T.tDestacado - 1.0, 0.3) * (1 - prog(t, T.tTarjeta + 0.4, 0.3)));
+  toque($('dedo'), pinX, pinY - 18, kc2);
+}
+</script></body></html>

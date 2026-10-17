@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ESCENA «reseñas» (14-oct-2026). Perfil de un negocio con su calificación grande que cuenta hasta su valor, las
+estrellas que se llenan, el conteo de reseñas que sube y las barras por estrella. Luego entran las reseñas una por una
+y, al final, la «Respuesta del propietario» a una reseña mala se escribe sola: así se contesta.
+16:9 = ventana de navegador (resumen a la izquierda, reseñas a la derecha); 9:16 = teléfono (una columna que se desliza).
+Estilo reconocible de reseñas, SIN logos ni nombres de terceros. Negocio y personas FICTICIOS; fechas relativas.
+
+Campos de T (todos opcionales; se mezclan con DEFAULT):
+  marca       id de recursos/marcas/ (por defecto "ejemplo")            colores y firma          firma   false o un texto propio
+  negocio     {nombre, tipo, cal, resenas, horario, dist:[%5★,%4★,%3★,%2★,%1★], temas:[[texto, n], ...]}
+  resenas     [{nombre, meta, estrellas, cuando, texto, util, respuesta:{texto, cuando}}]   2 o 3; la que traiga
+              «respuesta» muestra la del propietario (pon la de 1 estrella al final)
+  tCuenta     segundo en que empiezan a contar el número, las estrellas y las barras   0.3
+  durCuenta   cuánto tarda en contar                              1.4
+  tResenas    segundo en que entra la primera reseña              2.0
+  entreResenas separación entre reseñas                           0.55
+  tRespuesta  segundo en que aparece la respuesta del propietario (null = sin respuesta)   3.9
+  durRespuesta cuánto tarda en escribirse la respuesta             1.6
+  hora        hora del teléfono                                   "10:24"
+Ejemplo:  --T '{"negocio":{"nombre":"Cerrajería 24 h Centro","tipo":"Cerrajero","cal":4.9,"resenas":212},"tRespuesta":null}'
+-->
+<link rel="stylesheet" href="../base/base.css">
+<link rel="stylesheet" href="web.css">
+<style>
+  #pag{position:absolute;left:0;top:0;right:0;height:2400px}
+  #cab{position:absolute}
+  .horizontal #cab{left:80px;top:28px;right:80px} .vertical #cab{left:18px;top:62px;right:18px}
+  #cab .nom{font-size:30px;font-weight:600;color:#202124;line-height:1.2}
+  .vertical #cab .nom{font-size:24px}
+  #cab .lin{font-size:15px;color:#5f6368;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cab .ab{color:var(--abierto);font-weight:600}
+  #tabs{position:absolute;display:flex;gap:30px;font-size:15px;color:#5f6368;border-bottom:1px solid #e8eaed;white-space:nowrap}
+  .horizontal #tabs{left:80px;right:80px;top:118px} .vertical #tabs{left:0;right:0;top:150px;padding-left:18px;gap:24px}
+  #tabs span{padding-bottom:11px} #tabs span.on{color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:600}
+  /* resumen */
+  #resumen{position:absolute}
+  .horizontal #resumen{left:80px;top:178px;width:560px} .vertical #resumen{left:18px;right:18px;top:200px}
+  .sec{font-size:19px;font-weight:600;color:#202124;margin-bottom:16px}
+  #caja{display:flex;align-items:center;gap:26px}
+  .vertical #caja{gap:16px}
+  #barras{flex:1}
+  .barra{display:flex;align-items:center;gap:10px;font-size:13px;color:#5f6368;height:20px}
+  .barra .tr{flex:1;height:9px;border-radius:5px;background:#e8eaed;overflow:hidden}
+  .barra .ll{height:100%;border-radius:5px;background:var(--estrella)}
+  #grande{text-align:center;min-width:150px}
+  .vertical #grande{min-width:120px}
+  #num{font-size:72px;font-weight:400;color:#202124;line-height:1;font-variant-numeric:tabular-nums}
+  .vertical #num{font-size:58px}
+  #cuantas{font-size:14px;color:#5f6368;margin-top:6px}
+  #escribir{display:inline-flex;align-items:center;gap:8px;margin-top:22px;border:1px solid #dadce0;border-radius:20px;padding:9px 18px;
+    font-size:14px;font-weight:600;color:#1a73e8}
+  #temas{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  #temas span{background:#f1f3f4;border-radius:16px;padding:7px 13px;font-size:14px;color:#3c4043}
+  #temas b{font-weight:400;color:#80868b;margin-left:5px}
+  /* reseñas */
+  #lista{position:absolute}
+  .horizontal #lista{left:720px;top:178px;width:760px}
+  .horizontal .txt,.horizontal .resp .rx{font-size:16px} .vertical #lista{left:18px;right:18px;top:560px}
+  .orden{display:flex;gap:8px;margin-bottom:14px;white-space:nowrap}
+  .orden span{border:1px solid #dadce0;border-radius:8px;padding:6px 12px;font-size:13px;color:#3c4043}
+  .orden span.on{background:#e8f0fe;border-color:#e8f0fe;color:#1967d2;font-weight:600}
+  .res{padding:16px 0 18px;border-bottom:1px solid #ebebeb;position:relative}
+  .quien{display:flex;align-items:center;gap:12px}
+  .av{width:40px;height:40px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:#fff}
+  .quien .n{font-size:15px;font-weight:600;color:#202124}
+  .quien .m{font-size:13px;color:#70757a;margin-top:1px}
+  .cal{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:13px;color:#70757a}
+  .txt{font-size:15px;color:#202124;line-height:1.5;margin-top:6px}
+  .acc{display:flex;gap:22px;margin-top:9px;font-size:13px;color:#5f6368;align-items:center}
+  .resp{margin-top:12px;background:#f1f3f4;border-radius:10px;padding:11px 14px;position:relative;overflow:hidden}
+  .resp .rt{font-size:14px;font-weight:600;color:#202124} .resp .rt small{font-weight:400;color:#70757a;margin-left:6px;font-size:13px}
+  .resp .rx{font-size:15px;color:#202124;line-height:1.5;margin-top:4px}
+  .resp .bord{position:absolute;left:0;top:0;bottom:0;width:4px}
+  .cur{display:inline-block;width:1.5px;height:17px;background:#202124;vertical-align:-3px;margin-left:1px}
+  .vertical .tel-barra{background:#fff;left:14px;right:14px;top:14px;height:44px;padding:0 22px;border-radius:50px 50px 0 0}
+</style></head><body>
+<div class="firma" id="firma"></div>
+<div id="escena"><div id="disp"><div id="pantalla">
+  <div id="pag">
+    <div id="cab"></div>
+    <div id="tabs"><span>Resumen</span><span class="on">Reseñas</span><span>Fotos</span><span>Información</span></div>
+    <div id="resumen"></div>
+    <div id="lista"></div>
+  </div>
+</div></div></div>
+<script src="../base/base.js"></script>
+<script src="web.js"></script>
+<script>
+const DEFAULT = {
+  marca:"ejemplo", tCuenta:0.3, durCuenta:1.4, tResenas:2.0, entreResenas:0.55, tRespuesta:3.9, durRespuesta:1.6, hora:"10:24",
+  negocio:{nombre:"Taller Mecánico El Pistón", tipo:"Taller mecánico", cal:4.8, resenas:175, horario:"Cierra 8 p.m.",
+           dist:[86, 8, 3, 1, 2], temas:[["precio justo", 34], ["explican todo", 21], ["rápidos", 18], ["fotos del trabajo", 12]]},
+  resenas:[
+    {nombre:"Laura Méndez", meta:"Guía local · 23 reseñas", estrellas:5, cuando:"hace 2 días", util:4,
+     texto:"Me explicaron qué tenía mi carro antes de cobrarme y me mandaron fotos del trabajo. Volvería sin pensarlo."},
+    {nombre:"Ricardo Salinas", meta:"8 reseñas", estrellas:5, cuando:"hace una semana", util:2,
+     texto:"Me dieron cita el mismo día y quedó listo en la tarde. Precio justo."},
+    {nombre:"Jorge Treviño", meta:"3 reseñas", estrellas:1, cuando:"hace 3 semanas",
+     texto:"Me dijeron que estaría en 2 días y tardaron 5. Nadie me avisó.",
+     respuesta:{cuando:"hace 3 semanas", texto:"Jorge, tienes razón: debimos avisarte que la pieza venía tarde. Ya cambiamos eso y ahora mandamos el avance cada día. Gracias por decírnoslo."}}],
+};
+const COL = ["#7b61a8","#12a37f","#e8710a","#5b8def","#d93025"];
+const PULGAR = '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M2 21h4V9H2v12zm20-11a2 2 0 0 0-2-2h-6.3l1-4.6v-.3c0-.4-.2-.8-.4-1.1L13.2 1 6.6 7.6C6.2 8 6 8.5 6 9v10c0 1.1.9 2 2 2h9c.8 0 1.5-.5 1.8-1.2l3-7.1c.1-.2.2-.5.2-.7v-2z" fill="#5f6368"/></svg>';
+const COMP = '<svg width="15" height="15" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" fill="#5f6368"/><circle cx="6" cy="12" r="3" fill="#5f6368"/><circle cx="18" cy="19" r="3" fill="#5f6368"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4" stroke="#5f6368" stroke-width="2"/></svg>';
+
+let armado = false;
+function armar(T, N){
+  const v = vertical() ? 'v' : 'h'; if (armado === v) return; armado = v;
+  $('resumen').innerHTML = `<div class="sec">Resumen de reseñas</div>
+    <div id="caja"><div id="barras">${[5,4,3,2,1].map((e,i)=>`<div class="barra"><span>${e}</span><div class="tr"><div class="ll" id="b${i}"></div></div></div>`).join('')}</div>
+      <div id="grande"><div id="num"></div><div id="est" style="margin-top:6px"></div><div id="cuantas"></div></div></div>
+    <div id="escribir"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#1a73e8"/></svg>Escribir una reseña</div>
+    <div id="temas">${(N.temas||[]).map(x=>`<span>${esc(x[0])}<b>${x[1]}</b></span>`).join('')}</div>`;
+  $('lista').innerHTML = `<div class="orden"><span class="on">Más relevantes</span><span>Más recientes</span><span>Mejor calificación</span><span>Peor calificación</span></div>` +
+    T.resenas.map((r,i)=>`<div class="res" id="r${i}"><div class="quien"><span class="av" style="background:${COL[i%COL.length]}">${esc(r.nombre[0])}</span>
+      <div><div class="n">${esc(r.nombre)}</div><div class="m">${esc(r.meta||'')}</div></div></div>
+      <div class="cal">${estrellas(r.estrellas, 15)}<span>${esc(r.cuando)}</span></div>
+      <div class="txt">${esc(r.texto)}</div>
+      <div class="acc"><span style="display:flex;gap:6px;align-items:center">${PULGAR}Útil${r.util?` (${r.util})`:''}</span><span style="display:flex;gap:6px;align-items:center">${COMP}Compartir</span></div>
+      ${r.respuesta ? `<div class="resp" id="resp${i}"><div class="bord" id="bord${i}"></div><div class="rt">Respuesta del propietario<small>${esc(r.respuesta.cuando)}</small></div><div class="rx" id="rx${i}"></div></div>` : ''}</div>`).join('');
+}
+
+function render(t, T, escena){
+  T = Object.assign({}, DEFAULT, T || {});
+  const N = Object.assign({}, DEFAULT.negocio, T.negocio || {});
+  montar(T, {titulo: `${N.nombre} - Reseñas`, omni: esc(`${N.nombre} opiniones`), fav:'#f6b01e', hora:T.hora});
+  armar(T, N);
+  const V = vertical(), pant = $('pantalla'), PH = pant.offsetHeight;
+  const acento = getComputedStyle(document.body).getPropertyValue('--acento').trim();
+
+  // ---- en el teléfono la lista va justo debajo del resumen (su alto depende de los temas)
+  $('lista').style.top = V ? ($('resumen').offsetTop + $('resumen').offsetHeight + 26) + 'px' : '';
+  // ---- cabecera
+  $('cab').innerHTML = `<div class="nom">${esc(N.nombre)}</div><div class="lin">${N.cal.toFixed(1)} ${estrellas(N.cal, 15)} (${N.resenas}) · ${esc(N.tipo)} · <span class="ab">Abierto</span> · ${esc(N.horario)}</div>`;
+
+  // ---- el número que cuenta, las estrellas que se llenan, el conteo que sube y las barras
+  const k = prog(t, T.tCuenta, T.durCuenta);
+  $('num').textContent = cont(N.cal, k, 1);
+  $('est').innerHTML = estrellas(N.cal * k, V ? 18 : 22);
+  $('cuantas').textContent = cont(N.resenas, k, 0) + ' reseñas';
+  (N.dist || []).forEach((p,i)=>{ const b = $('b'+i); if (b) b.style.width = (p * prog(t, T.tCuenta + 0.12*i, T.durCuenta*0.8)) + '%'; });
+  const kT = prog(t, T.tCuenta + T.durCuenta*0.7, 0.5);
+  $('temas').style.opacity = kT; $('escribir').style.opacity = 0.4 + 0.6*kT;
+
+  // ---- reseñas en cascada
+  const hayResp = T.tRespuesta != null;
+  T.resenas.forEach((r,i)=>{
+    const el = $('r'+i); entra(el, t, T.tResenas + i*T.entreResenas, 0.4, 28);
+    if (r.respuesta){
+      const rp = $('resp'+i), kr = hayResp ? prog(t, T.tRespuesta, 0.35) : 0;
+      rp.style.display = kr > 0 ? '' : 'none'; rp.style.opacity = kr; rp.style.transform = `translateY(${12*(1-kr)}px)`;
+      const txt = r.respuesta.texto, nn = hayResp ? Math.max(0, Math.min(txt.length, Math.floor((t - T.tRespuesta - 0.3)/T.durRespuesta * txt.length))) : 0;
+      const escribiendo = nn < txt.length;
+      $('rx'+i).innerHTML = esc(txt.slice(0, nn)) + (escribiendo && Math.floor(t*4)%2===0 ? '<span class="cur"></span>' : (escribiendo ? '<span class="cur" style="opacity:0"></span>' : ''));
+      $('rx'+i).style.minHeight = '45px';
+      $('bord'+i).style.background = acento; $('bord'+i).style.opacity = prog(t, T.tRespuesta + 0.2, 0.4);
+    }
+  });
+
+  // ---- desplazamiento en el teléfono para que se vea lo que va entrando
+  let sc = 0;
+  if (V){
+    let prev = 0;
+    const etapas = T.resenas.map((r,i)=>[T.tResenas + i*T.entreResenas, $('r'+i)]);
+    const iResp = T.resenas.findIndex(r => r.respuesta);
+    if (hayResp && iResp >= 0) etapas.push([T.tRespuesta, $('r'+iResp), true]);
+    etapas.forEach(([ta, el, conResp])=>{
+      // sin la respuesta, el fondo es la fila de «Útil / Compartir» (así no brinca cuando la respuesta aparece)
+      const p = conResp ? pos(el) : pos(el.querySelector('.acc'));
+      const fondo = p.y + p.h - pant.offsetTop + (conResp ? 0 : 18);
+      const meta = Math.max(prev, fondo - PH*0.80);
+      sc += (meta - prev) * eio((t - ta + 0.1) / 0.7); prev = meta;
+    });
+  }
+  $('pag').style.transform = `translateY(${-sc}px)`;
+
+  // ---- cámara: el número grande -> las reseñas -> la respuesta del propietario
+  const pr = pos($('caja')), pl = pos($('lista'));
+  const iR = T.resenas.findIndex(r => r.respuesta), rEl = iR >= 0 ? $('r'+iR) : $('r'+(T.resenas.length-1)), prr = pos(rEl);
+  const tR = T.tResenas, tP = hayResp ? T.tRespuesta : null;
+  if (V){
+    const pts = [[0, 1.48, 215, pr.cy - 40, 540, 640], [tR - 0.1, 1.50, 215, pr.cy - 20 - sc, 540, 640], [tR + 0.8, 1.38, 215, 470, 540, 700]];
+    if (tP != null) pts.push([tP - 0.1, 1.38, 215, 470, 540, 700], [tP + 0.7, 1.62, 215, prr.y + prr.h*0.62 - sc, 540, 660]);
+    camino(t, pts);
+  } else {
+    const pts = [[0, 1.45, pr.cx + 10, pr.cy + 20], [tR - 0.2, 1.48, pr.cx + 10, pr.cy + 40], [tR + 0.7, 1.12, pl.cx - 40, 470]];
+    if (tP != null) pts.push([tP - 0.1, 1.12, pl.cx - 40, 470], [tP + 0.7, 1.72, pl.cx, prr.y + prr.h*0.62, 960, 720]);
+    camino(t, pts);
+  }
+  girar(t, (tP ?? tR + 1) + 1.6);
+}
+</script></body></html>

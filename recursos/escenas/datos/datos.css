@@ -1,0 +1,28 @@
+/* Piezas comunes de las escenas de DATOS (barras, líneas, contador). Va DESPUÉS de ../base/base.css.
+   Todo se diseña en px reales: el capturador abre la página a 1920x1080 (horizontal) o 1080x1920 (vertical). */
+#cam{position:absolute;inset:0;z-index:1}
+/* luces de fondo que dan profundidad (no planas): un halo detrás de la tarjeta y un piso de luz */
+#halo{position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 42% 30% at 50% 58%,color-mix(in srgb,var(--acento) 10%,transparent),transparent 70%),
+             radial-gradient(ellipse 70% 18% at 50% 96%,rgba(0,0,0,.35),transparent 70%)}
+#grano{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1.2px);background-size:26px 26px;
+  -webkit-mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,#000 30%,transparent 80%)}
+.tarjeta{position:absolute;overflow:hidden;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--tarjeta) 100%,#fff 4%) 0%,var(--tarjeta) 45%,color-mix(in srgb,var(--tarjeta) 85%,#000 25%) 100%)}
+.tarjeta::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(115deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 30%),
+             radial-gradient(ellipse 60% 40% at 85% 0%,color-mix(in srgb,var(--acento) 9%,transparent),transparent 70%)}
+.horizontal .tarjeta{left:150px;top:150px;width:1620px;height:810px;border-radius:36px}
+.vertical .tarjeta{left:56px;top:230px;width:968px;height:1070px;border-radius:40px}
+.cab{position:absolute;left:72px;right:72px;top:60px}
+.vertical .cab{left:60px;right:60px;top:64px}
+.cab .etiqueta{display:flex;align-items:center;gap:14px}
+.cab .etiqueta::before{content:"";width:34px;height:3px;border-radius:2px;background:var(--acento)}
+.cab h1{font-family:var(--titulos);font-weight:700;font-size:56px;line-height:1.08;letter-spacing:-.01em;margin-top:16px;
+  background:linear-gradient(180deg,#fff 30%,color-mix(in srgb,var(--texto) 80%,var(--tenue)) 100%);-webkit-background-clip:text;color:transparent}
+.vertical .cab .etiqueta{font-size:26px}
+.vertical .cab h1{font-size:64px}
+.nota{position:absolute;left:72px;right:72px;bottom:46px;font:400 22px var(--mono);color:var(--tenue);letter-spacing:.02em;opacity:.85}
+.vertical .nota{left:60px;right:60px;bottom:52px;font-size:25px}
+.num{font-variant-numeric:tabular-nums}

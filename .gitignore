@@ -23,3 +23,10 @@ recursos/sfx_usuario/*
 
 # biblioteca de las series (imagenes, voz, musica): pesa y no va al repo
 series/
+
+# las marcas de cada quien se quedan en su maquina; solo el ejemplo viaja
+recursos/marcas/*.json
+!recursos/marcas/ejemplo.json
+
+# los iconos se generan con las marcas de cada quien (capturar.py lo hace solo)
+recursos/escenas/iconos/iconos.js

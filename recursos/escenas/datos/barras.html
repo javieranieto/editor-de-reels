@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ESCENA: gráfica de BARRAS animada (banco de escenas, 14-oct-2026).
+render(t, T) pinta el segundo t. Horizontal (16:9): columnas con eje y líneas guía. Vertical (9:16): renglones apilados,
+más grandes, que caben arriba de la franja de subtítulos (70%-82% del alto queda libre).
+
+Campos de T (todos opcionales; lo que falte sale del DEFAULT de abajo):
+  marca     id de recursos/marcas/ (por defecto "ejemplo")
+  etiqueta  texto chico arriba del título (mono, en color acento). "" lo quita.
+  titulo    título de la gráfica
+  barras    [{etq, valor, destacada, pre, suf, dec}]  — pre/suf/dec por barra ganan a los generales
+  pre, suf, dec   formato general del valor ("$", " clientes", decimales)
+  t0        segundo en que empieza a crecer la primera barra
+  paso      separación entre una barra y la siguiente (s)
+  dur       lo que tarda en crecer cada barra (s)
+  tdest     segundo en que se apagan las demás y se ilumina la destacada (por defecto, al terminar la última)
+  nota      fuente o aclaración abajo ("" la quita)
+  firma     true | false | "texto propio"
+  camara    duración del acercamiento lento (s, 6) · zoom cuánto se acerca (0.045)
+Ejemplo: --T '{"titulo":"Mensajes por día","barras":[{"etq":"Lun","valor":12},{"etq":"Mar","valor":31,"destacada":true}],"pre":""}'
+-->
+<link rel="stylesheet" href="../base/base.css"><link rel="stylesheet" href="datos.css">
+<style>
+  #plot{position:absolute}
+  .horizontal #plot{left:200px;right:80px;top:236px;bottom:150px}
+  .vertical #plot{left:60px;right:60px;top:290px;bottom:130px}
+  /* líneas guía y eje (solo horizontal) */
+  .guia{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.14),rgba(255,255,255,.04));transform-origin:0 50%}
+  .guia.base{height:2px;background:linear-gradient(90deg,rgba(255,255,255,.35),rgba(255,255,255,.10))}
+  .yv{position:absolute;right:calc(100% + 22px);transform:translateY(-50%);font:400 23px var(--mono);color:var(--tenue);white-space:nowrap;opacity:.8}
+  /* columnas */
+  .col{position:absolute;bottom:0;border-radius:16px 16px 4px 4px;transform-origin:50% 100%;
+    background:linear-gradient(180deg,rgba(214,222,240,.62) 0%,rgba(170,184,214,.30) 100%);
+    box-shadow:0 22px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.55),inset 0 -20px 30px rgba(0,0,0,.12)}
+  .col::after{content:"";position:absolute;left:10%;top:6px;width:22%;bottom:12px;border-radius:10px;
+    background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0))}
+  .col.dest{background:linear-gradient(180deg,var(--acento2) 0%,var(--acento) 40%,color-mix(in srgb,var(--acento) 70%,#000) 100%)}
+  .val{position:absolute;transform:translateX(-50%);font-family:var(--titulos);font-weight:700;font-size:44px;white-space:nowrap;color:var(--texto)}
+  .val.dest{color:var(--acento2);font-size:58px}
+  .etqx{position:absolute;top:calc(100% + 20px);transform:translateX(-50%);text-align:center;font-weight:500;font-size:28px;line-height:1.2;color:var(--tenue)}
+  .etqx.dest{color:var(--texto);font-weight:600}
+  /* renglones (vertical) */
+  .ren{position:absolute;left:0;right:0}
+  .ren .fila1{display:flex;justify-content:space-between;align-items:baseline;gap:20px}
+  .ren .e{font-weight:500;font-size:40px;color:var(--tenue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ren .v{font-family:var(--titulos);font-weight:700;font-size:52px;color:var(--texto);white-space:nowrap}
+  .ren.dest .e{color:var(--texto);font-weight:600} .ren.dest .v{color:var(--acento2);font-size:62px}
+  .ren .pista{position:relative;margin-top:14px;height:50px;border-radius:25px;background:rgba(255,255,255,.06);
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.35)}
+  .ren .lleno{position:absolute;left:0;top:0;bottom:0;border-radius:22px;
+    background:linear-gradient(90deg,rgba(170,184,214,.30),rgba(214,222,240,.62));
+    box-shadow:0 10px 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.5)}
+  .ren.dest .lleno{background:linear-gradient(90deg,color-mix(in srgb,var(--acento) 70%,#000),var(--acento) 60%,var(--acento2))}
+</style></head><body>
+<div id="halo"></div><div id="grano"></div>
+<div class="firma" id="firma"></div>
+<div id="cam"><div class="tarjeta vidrio" id="tarjeta">
+  <div class="cab"><div class="etiqueta" id="etq"></div><h1 id="tit"></h1></div>
+  <div id="plot"></div>
+  <div class="nota" id="nota"></div>
+</div></div>
+<script src="../base/base.js"></script><script src="datos.js"></script>
+<script>
+const DEFAULT = {
+  marca:"ejemplo", etiqueta:"Un mes de un taller", titulo:"¿Cuánto dinero trajo cada canal?",
+  barras:[{etq:"Google", valor:48200},{etq:"Facebook", valor:31900},{etq:"Seguimiento", valor:27300, destacada:true},
+          {etq:"Recomendación", valor:22600},{etq:"Volantes", valor:4100}],
+  pre:"$", suf:"", dec:0, t0:0.7, paso:0.22, dur:1.0, tdest:null, nota:"Datos de ejemplo · ingreso cobrado por canal de origen",
+  firma:true, camara:6, zoom:0.045
+};
+let armado = "";
+function armar(T, V){
+  const P = $('plot'), B = T.barras; let h = "";
+  if(!V){
+    const {tope, paso} = ejeBonito(Math.max(...B.map(b=>b.valor)), 4);
+    for(let v=0; v<=tope+1e-9; v+=paso){
+      const y = (1-v/tope)*100;
+      h += `<div class="guia ${v===0?'base':''}" style="top:${y}%"></div><div class="yv num" style="top:${y}%">${(T.pre||'')+fmt(v)}</div>`;
+    }
+    B.forEach((b,i)=>{ h += `<div class="col ${b.destacada?'dest':''}" id="c${i}"></div><div class="val num ${b.destacada?'dest':''}" id="v${i}"></div>
+      <div class="etqx ${b.destacada?'dest':''}" id="x${i}">${b.etq}</div>`; });
+    P.dataset.tope = tope;
+  } else {
+    B.forEach((b,i)=>{ h += `<div class="ren ${b.destacada?'dest':''}" id="r${i}"><div class="fila1"><span class="e">${b.etq}</span><span class="v num" id="v${i}"></span></div>
+      <div class="pista"><div class="lleno" id="c${i}"></div></div></div>`; });
+  }
+  P.innerHTML = h;
+}
+function render(t, T, escena){
+  T = Object.assign({}, DEFAULT, T); marca(T); t_global = t; firma(T);
+  const V = vertical(), B = T.barras, n = B.length;
+  const clave = JSON.stringify([T.barras, T.pre, V]); if(clave !== armado){ armar(T, V); armado = clave; }
+  $('etq').textContent = T.etiqueta || ''; $('etq').style.display = T.etiqueta ? '' : 'none';
+  $('tit').textContent = T.titulo; $('nota').textContent = T.nota || '';
+  empuje(t, T); entraTarjeta($('tarjeta'), t);
+  entra($('etq'), t, .25, .5, 16); entra($('tit'), t, .32, .55, 24); $('nota').style.opacity = .85*prog(t, T.t0 + T.paso*n + .3, .6);
+  const hayDest = B.some(b=>b.destacada);
+  const tdest = T.tdest ?? (T.t0 + T.paso*(n-1) + T.dur + .15);
+  const apaga = hayDest ? prog(t, tdest, .5) : 0;
+  const fmtB = (b, p) => cont(b.valor, p, b.dec ?? T.dec, b.pre ?? T.pre, b.suf ?? T.suf);
+  const P = $('plot'), W = P.offsetWidth, H = P.offsetHeight;
+  if(!V){
+    const tope = +P.dataset.tope, slot = W/n, bw = Math.min(190, slot*.6);
+    P.querySelectorAll('.guia').forEach((g,k)=>{ g.style.transform = `scaleX(${prog(t, .45 + .06*k, .7)})`; });
+    P.querySelectorAll('.yv').forEach((g,k)=>{ g.style.opacity = .8*prog(t, .55 + .06*k, .5); });
+    B.forEach((b,i)=>{
+      const a = T.t0 + T.paso*i, r = resorte(t, a, T.dur), k = prog(t, a, T.dur*.9);
+      const hh = H*b.valor/tope, cx = slot*(i+.5);
+      const c = $('c'+i); c.style.left = (cx-bw/2)+'px'; c.style.width = bw+'px'; c.style.height = hh+'px';
+      c.style.transform = `scaleY(${Math.max(r,0)})`;
+      c.style.opacity = b.destacada || !hayDest ? 1 : 1 - .55*apaga;
+      if(b.destacada) c.style.boxShadow = `0 22px 40px rgba(0,0,0,.35),0 0 ${70*apaga}px color-mix(in srgb,var(--acento) ${45*apaga}%,transparent),inset 0 1px 0 rgba(255,255,255,.55)`;
+      const v = $('v'+i); v.textContent = fmtB(b, k); v.style.left = cx+'px';
+      v.style.top = (H - hh*Math.max(r,0) - (b.destacada?78:62) - (b.destacada?8*apaga:0))+'px';
+      v.style.opacity = prog(t, a+.1, .35) * (b.destacada || !hayDest ? 1 : 1 - .45*apaga);
+      if(b.destacada) v.style.transform = `translateX(-50%) scale(${1+.08*resorte(t, tdest, .5)})`;
+      const x = $('x'+i); x.style.left = cx+'px'; x.style.width = (slot-12)+'px';
+      x.style.opacity = prog(t, a-.1, .4) * (b.destacada || !hayDest ? 1 : 1 - .35*apaga);
+    });
+  } else {
+    const mx = Math.max(...B.map(b=>b.valor)), alto = H/n;
+    B.forEach((b,i)=>{
+      const a = T.t0 + T.paso*i, r = resorte(t, a, T.dur), k = prog(t, a, T.dur*.9);
+      const R = $('r'+i); R.style.top = (i*alto + (alto-130)/2)+'px';
+      const e = prog(t, a-.15, .45); R.style.transform = `translateX(${-30*(1-e)}px)`;
+      R.style.opacity = e * (b.destacada || !hayDest ? 1 : 1 - .5*apaga);
+      const c = $('c'+i); c.style.width = (94*b.valor/mx*Math.min(Math.max(r,0),1.06))+'%';
+      if(b.destacada) c.style.boxShadow = `0 10px 24px rgba(0,0,0,.35),0 0 ${60*apaga}px color-mix(in srgb,var(--acento) ${50*apaga}%,transparent)`;
+      $('v'+i).textContent = fmtB(b, k);
+    });
+  }
+}
+</script></body></html>

@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ESCENA: panel de campañas de publicidad (14-oct-2026). Administrador de anuncios GENÉRICO: sin logos ni nombres
+de terceros. Laptop en 16:9, teléfono en 9:16. Gráfica de línea arriba, tabla de campañas con estado (punto verde
+Activa / gris Pausada), Gasto, Resultados y Costo por resultado; los números cuentan; un recuadro resalta una celda y
+la cámara se acerca. Las columnas son configurables y pueden APARECER en su segundo (p. ej. «Clientes que pagaron»):
+así cuenta «la campaña más barata por mensaje no es la que trae clientes».
+
+render(t, T, escena) pinta el segundo t. Campos de T (todos opcionales; se mezclan con DEFAULT):
+  marca id de recursos/marcas/   firma false = sin firma   negocio (nombre de la cuenta)   periodo "Últimos 30 días"
+  columnas  [{k: campo de la campaña, et: encabezado, tipo: "dinero"|"dinero2"|"num", fija: true = no cuenta (un ajuste),
+              sub: texto chico bajo el número
+              (o "tipo" = usa el tipo de resultado de la campaña), aparece: segundo en que la columna entra (opcional),
+              nueva: true = se marca con «Nuevo»}]
+  campanas  [{n: nombre, estado: "activa"|"pausada", presupuesto: $ diarios, gasto, res, tipo: "Mensajes", cpr, …}]
+            cpr (costo por resultado) y cpc (costo por cliente) se calculan solos si faltan (gasto/res, gasto/clientes)
+  cuenta    segundo en que los números empiezan a subir (1.3 s)          grafica  true|false (línea de arriba)
+  serie     [valores por día] de la gráfica (30)                          serieEt  "Resultados por día"
+  resaltes  [{t, fila, col: k de la columna, nota: "texto", lado: "arriba"|"abajo"|"izquierda"|"derecha",
+              hasta: segundo en que se quita}]  recuadro + nota + cámara. La nota tapa la fila vecina: escoge el lado
+              que no esconda el número con el que se compara.
+  camara    [{t, fila, col | foco: "tabla"|"grafica"|"todo", z}]  si falta, se arma sola desde los resaltes
+Ejemplo: --T '{"resaltes":[{"t":1.8,"fila":0,"col":"cpr","nota":"El más barato"}],"columnas":[{"k":"gasto","et":"Gasto","tipo":"dinero"},{"k":"res","et":"Resultados","tipo":"num","sub":"tipo"},{"k":"cpr","et":"Costo por resultado","tipo":"dinero2"}]}'
+-->
+<link rel="stylesheet" href="../base/base.css"><link rel="stylesheet" href="negocio.css">
+<style>
+  :root{--azul:#2f6fe0}
+  .riel{position:absolute;left:0;top:0;bottom:0;width:58px;background:#1f2533;display:flex;flex-direction:column;align-items:center;padding-top:16px;gap:8px}
+  .riel .lg{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#5b8def,#2f6fe0);margin-bottom:12px}
+  .riel div.ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9aa3b8}
+  .riel div.ic.on{background:rgba(255,255,255,.12);color:#fff}
+  .zona{position:absolute;left:58px;right:0;top:0;bottom:0}
+  .barcta{height:56px;background:#fff;border-bottom:1px solid #e6e8ee;display:flex;align-items:center;gap:12px;padding:0 20px;font-size:13.5px;color:#2b3346}
+  .cta{display:flex;align-items:center;gap:9px;font-weight:600}
+  .cta .ava{width:28px;height:28px;font-size:11px;border-radius:7px}
+  .barcta .der{margin-left:auto;display:flex;align-items:center;gap:10px;color:#7a8296;font-size:12.5px}
+  .tabsA{display:flex;gap:2px;padding:0 20px;background:#fff;border-bottom:1px solid #e6e8ee}
+  .tabsA span{padding:12px 16px 11px;font-size:13.5px;font-weight:600;color:#5b6477;border-bottom:3px solid transparent;display:flex;gap:8px;align-items:center}
+  .tabsA span.on{color:var(--azul);border-color:var(--azul)}
+  .contA{position:absolute;left:0;right:0;top:101px;bottom:0;padding:16px 20px}
+  .resumen{display:flex;gap:16px;height:178px;margin-bottom:14px}
+  .met{width:200px;display:flex;flex-direction:column;gap:10px}
+  .met .tarj{flex:1;padding:10px 14px}
+  .met .et{font-size:12.5px;color:#5b6477;font-weight:600} .met .num{font-size:22px;font-weight:700;color:#141a29;margin-top:2px}
+  .graf{flex:1;position:relative;padding:12px 16px}
+  .graf .tit{font-size:13px;font-weight:700;color:#2b3346;display:flex;justify-content:space-between}
+  .graf .tit span{font-weight:500;color:#8a93a6}
+  .ejeY{position:absolute;left:16px;font-size:11px;color:#9aa1b2}
+  .ejeX{position:absolute;bottom:8px;font-size:11px;color:#9aa1b2}
+  .rejA{position:absolute;left:46px;right:16px;height:1px;background:#eef0f4}
+  .barherr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .btnA{height:34px;border-radius:8px;padding:0 13px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;border:1px solid #dfe3ea;background:#fff;color:#2b3346;white-space:nowrap}
+  .btnA.crear{background:#1f9d55;border-color:transparent;color:#fff}
+  .btnA.dis{color:#b0b6c3}
+  .tablaA{position:relative;overflow:hidden}
+  .filaA{display:flex;align-items:center;height:54px;border-bottom:1px solid #f0f1f4;font-size:14px;background:#fff;position:relative}
+  .filaA.cab{height:46px;background:#fafbfc;font-size:12px;font-weight:700;color:#5b6477;line-height:1.25}
+  .filaA.tot{background:#fafbfc;font-weight:700;height:48px;border-bottom:none}
+  .celda{flex:none;padding:0 12px;overflow:hidden;white-space:nowrap;text-align:right;position:relative}
+  .celda.nom{flex:1;text-align:left;min-width:0}
+  .celda.nom b{display:block;font-weight:600;color:#1f4fb5;overflow:hidden;text-overflow:ellipsis}
+  .celda.nom small{display:block;font-size:11.5px;color:#8a93a6;font-weight:400}
+  .celda small.sub{display:block;font-size:11.5px;color:#8a93a6;font-weight:400}
+  .celda.izq{text-align:left}
+  .cab .celda{white-space:normal}
+  .cab .celda .nuevo{display:inline-block;background:color-mix(in srgb,var(--acento) 15%,#fff);color:var(--acento);border-radius:6px;padding:0 6px;font-size:10.5px;margin-left:4px;vertical-align:1px}
+  .sw{width:36px;height:20px;border-radius:10px;position:relative;background:#c9ced8}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .sw.on{background:var(--azul)} .sw.on::after{left:18px}
+  .ent{display:flex;align-items:center;gap:7px;color:#2b3346} .ent i{width:9px;height:9px;border-radius:50%}
+  .col-nueva{background:color-mix(in srgb,var(--acento) 6%,transparent)}
+  /* teléfono */
+  .telA{background:#f3f4f7}
+  .telA .cab1{position:absolute;left:0;right:0;top:52px;height:56px;display:flex;align-items:center;padding:0 18px;gap:10px}
+  .telA .cab1 h1{font-size:26px;font-weight:700;color:#141a29}
+  .telA .chipsA{position:absolute;left:16px;right:8px;top:110px;display:flex;gap:8px}
+  .telA .chipsA span{height:30px;border-radius:15px;padding:0 12px;font-size:12.5px;font-weight:600;display:flex;align-items:center;background:#fff;border:1px solid #e3e6ec;color:#3b4457;white-space:nowrap}
+  .telA .grafT{position:absolute;left:12px;right:12px;top:152px;height:150px;padding:10px 14px}
+  .telA .lista{position:absolute;left:12px;right:12px;top:314px;bottom:20px;overflow:hidden}
+  .tc{background:#fff;border:1px solid #e6e8ee;border-radius:14px;padding:12px 14px 10px;margin-bottom:10px;position:relative}
+  .tc .l1{display:flex;align-items:center;gap:10px}
+  .tc .l1 b{flex:1;font-size:15px;font-weight:600;color:#141a29;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tc .ent{font-size:12.5px;margin-top:2px}
+  .tc .mets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+  .tc .m{background:#f6f7f9;border-radius:9px;padding:6px 8px;position:relative;overflow:hidden}
+  .tc .m .et{font-size:11px;color:#7a8296;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tc .m .v{font-size:15px;font-weight:700;color:#141a29;white-space:nowrap}
+  .tc .extra{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;overflow:hidden}
+  .tc .extra .m{background:color-mix(in srgb,var(--acento) 9%,#fff)}
+</style></head><body>
+<div class="firma" id="firma"></div>
+<div id="escena"></div>
+<script src="../base/base.js"></script><script src="dispositivo.js"></script>
+<script>
+const DEFAULT = {
+  marca:"ejemplo", negocio:"Taller Mecánico Hernández", periodo:"Últimos 30 días",
+  columnas:[
+    {k:"presupuesto",et:"Presupuesto",tipo:"dinero",sub:"Diario",fija:true},
+    {k:"gasto",et:"Importe gastado",tipo:"dinero"},
+    {k:"res",et:"Resultados",tipo:"num",sub:"tipo"},
+    {k:"cpr",et:"Costo por resultado",tipo:"dinero2",sub:"Por resultado"},
+    {k:"clientes",et:"Clientes que pagaron",tipo:"num",aparece:3.3,nueva:true,sub:"Según el CRM"},
+    {k:"cpc",et:"Costo por cliente",tipo:"dinero",aparece:3.3,nueva:true},
+  ],
+  campanas:[
+    {n:"Mensajes · Fallas comunes",estado:"activa",presupuesto:150,gasto:4520,res:402,tipo:"Mensajes",clientes:4},
+    {n:"Mensajes · Mantenimiento",estado:"activa",presupuesto:200,gasto:5980,res:214,tipo:"Mensajes",clientes:19},
+    {n:"Promoción afinación",estado:"activa",presupuesto:120,gasto:3350,res:167,tipo:"Mensajes",clientes:7},
+    {n:"Vacante · Técnico mecánico",estado:"pausada",presupuesto:60,gasto:640,res:38,tipo:"Solicitudes",clientes:null},
+    {n:"Reconocimiento de marca",estado:"pausada",presupuesto:80,gasto:1200,res:9850,tipo:"Personas alcanzadas",cpr:0.12,clientes:null},
+  ],
+  cuenta:0.5, grafica:true, serieEt:"Resultados por día",
+  serie:[22,25,19,28,31,27,24,30,35,33,29,26,31,38,36,33,40,37,34,41,44,39,36,42,47,45,41,48,52,49],
+  resaltes:[{t:1.9,fila:0,col:"cpr",nota:"El más barato por mensaje",hasta:3.5},{t:4.1,fila:1,col:"clientes",nota:"El que sí trae clientes",lado:"abajo"}],
+  camara:null,
+};
+const SENAL = '<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="1" fill="currentColor"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>';
+const ANCHO = {presupuesto:118, gasto:122, res:120, cpr:124, clientes:126, cpc:124};
+let CLAVE = "", ORDEN_PATH = "";
+
+function valor(c, k){
+  if (k==="cpr" && c.cpr==null) return c.res ? c.gasto/c.res : null;
+  if (k==="cpc" && c.cpc==null) return c.clientes ? c.gasto/c.clientes : null;
+  return c[k];
+}
+function fmt(tipo, v, p){
+  if (v==null) return "—";
+  const x = v*p;
+  if (tipo==="dinero2") return pesos(x, 2);
+  if (tipo==="dinero") return pesos(Math.round(x));
+  return Math.round(x).toLocaleString("es-MX");
+}
+function subDe(col, c){ if (!col.sub) return ""; if (col.sub==="tipo") return c.tipo||""; if (col.k==="cpr") return c.tipo ? "Por " + ({"Mensajes":"mensaje","Solicitudes":"solicitud","Personas alcanzadas":"persona"}[c.tipo] || "resultado") : col.sub; return col.sub; }
+
+function construye(T){
+  const v = vertical(), app = montaDispositivo(v ? "telefono" : "laptop");
+  app.className = v ? "telA" : "";
+  const ini = iniciales(T.negocio.replace(/^(Clínica|Taller|Cerrajería)\s+(Mecánico\s+|Dental\s+)?/,''));
+  const S = T.serie, mx = Math.max(...S)*1.15;
+  const graf = (w,h) => { const pts = S.map((y,i)=>[i*(w/(S.length-1)), h - y/mx*h]);
+    const d = "M" + pts.map(p=>p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" L");
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="position:absolute;overflow:visible" id="svgG">
+      <defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f6fe0" stop-opacity=".22"/><stop offset="1" stop-color="#2f6fe0" stop-opacity="0"/></linearGradient>
+      <clipPath id="clipG"><rect id="clipR" x="0" y="-10" width="0" height="${h+20}"/></clipPath></defs>
+      <path d="${d} L${w} ${h} L0 ${h}Z" fill="url(#gA)" clip-path="url(#clipG)"/>
+      <path d="${d}" fill="none" stroke="#2f6fe0" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" clip-path="url(#clipG)"/>
+      <circle id="ptoG" r="5" fill="#fff" stroke="#2f6fe0" stroke-width="2.6" cx="0" cy="0"/></svg>`; };
+  if (!v){
+    const cols = T.columnas;
+    const cab = `<div class="filaA cab"><div class="celda izq" style="width:62px">Act.</div><div class="celda nom">Campaña</div><div class="celda izq" style="width:116px">Entrega</div>
+      ${cols.map(c=>`<div class="celda ${c.nueva?'col-nueva':''}" data-k="${c.k}" style="width:${ANCHO[c.k]||124}px;height:100%;display:flex;align-items:center;justify-content:flex-end"><span>${c.et}${c.nueva?'<span class="nuevo">Nuevo</span>':''}</span></div>`).join("")}</div>`;
+    const filas = T.campanas.map((c,i)=>`<div class="filaA" id="fa${i}"><div class="celda izq" style="width:62px"><div class="sw ${c.estado==='activa'?'on':''}"></div></div>
+      <div class="celda nom"><b>${c.n}</b><small>${c.estado==='activa'?'Campaña activa':'Desactivada'} · Editar · Ver gráficas</small></div>
+      <div class="celda izq" style="width:116px"><span class="ent"><i style="background:${c.estado==='activa'?'#22b35e':'#a7adb9'}"></i>${c.estado==='activa'?'Activa':'Pausada'}</span></div>
+      ${cols.map(col=>`<div class="celda ${col.nueva?'col-nueva':''}" data-k="${col.k}" style="width:${ANCHO[col.k]||124}px;height:100%;display:flex;flex-direction:column;justify-content:center"><span id="c-${i}-${col.k}"></span><small class="sub">${subDe(col,c)}</small></div>`).join("")}</div>`).join("");
+    const tot = `<div class="filaA tot"><div class="celda izq" style="width:62px"></div><div class="celda nom" style="color:#2b3346">Resultados de ${T.campanas.length} campañas</div><div class="celda" style="width:116px"></div>
+      ${cols.map(col=>`<div class="celda ${col.nueva?'col-nueva':''}" data-k="${col.k}" style="width:${ANCHO[col.k]||124}px"><span id="t-${col.k}"></span></div>`).join("")}</div>`;
+    app.innerHTML = `<div class="riel"><div class="lg"></div><div class="ic">${ICONO("inicio",20)}</div><div class="ic on">${ICONO("megafono",20)}</div><div class="ic">${ICONO("grafica",20)}</div><div class="ic">${ICONO("clientes",20)}</div><div class="ic">${ICONO("ajustes",20)}</div></div>
+      <div class="zona"><div class="barcta"><div class="cta"><div class="ava" style="background:var(--marca)">${ini}</div>${T.negocio} <span style="color:#8a93a6;font-weight:400">· Cuenta publicitaria ▾</span></div>
+        <div class="der">Actualizado hace 2 min <div class="chip">📅&nbsp;${T.periodo} ▾</div></div></div>
+        <div class="tabsA"><span class="on">${ICONO("megafono",16)}Campañas</span><span>Conjuntos de anuncios</span><span>Anuncios</span></div>
+        <div class="contA">
+          <div class="resumen" ${T.grafica?'':'style="display:none"'}>
+            <div class="met"><div class="tarj"><div class="et">Importe gastado</div><div class="num" id="r-gasto">$0</div></div>
+              <div class="tarj"><div class="et">Resultados</div><div class="num" id="r-res">0</div></div></div>
+            <div class="graf tarj" id="grafica"><div class="tit">${T.serieEt} <span>${T.periodo}</span></div>
+              ${[0,0.5,1].map(f=>`<div class="rejA" style="top:${40+f*104}px"></div><div class="ejeY" style="top:${33+f*104}px">${Math.round(mx*(1-f))}</div>`).join("")}
+              <div style="position:absolute;left:46px;top:40px">${graf(1184-200-16-46-16-32-16, 104)}</div>
+              <div class="ejeX" style="left:46px">hace 30 días</div><div class="ejeX" style="left:50%">hace 15 días</div><div class="ejeX" style="right:16px">hoy</div></div>
+          </div>
+          <div class="barherr"><div class="btnA crear">${ICONO("mas",14)} Crear</div><div class="btnA dis">Duplicar</div><div class="btnA dis">Editar</div><div class="btnA dis">Prueba A/B</div>
+            <div style="margin-left:auto;display:flex;gap:8px"><div class="btnA">Columnas: Rendimiento ▾</div><div class="btnA">Desglose ▾</div></div></div>
+          <div class="tarj tablaA" id="tabla">${cab}${filas}${tot}</div>
+        </div></div>`;
+  } else {
+    const cols = T.columnas.filter(c=>c.k!=="presupuesto");
+    const base = cols.filter(c=>!c.aparece).slice(0,3), extra = cols.filter(c=>c.aparece).slice(0,2);
+    const tarjetas = T.campanas.slice(0,4).map((c,i)=>`<div class="tc" id="fa${i}"><div class="l1"><b>${c.n}</b><div class="sw ${c.estado==='activa'?'on':''}" style="background:${c.estado==='activa'?'#2f6fe0':'#c9ced8'}"></div></div>
+      <div class="ent"><i style="background:${c.estado==='activa'?'#22b35e':'#a7adb9'}"></i>${c.estado==='activa'?'Activa':'Pausada'} · ${pesos(c.presupuesto)} diarios</div>
+      <div class="mets">${base.map(col=>`<div class="m"><div class="et">${col.k==='cpr'?'Costo/resultado':col.k==='gasto'?'Gastado':col.et}</div><div class="v" id="c-${i}-${col.k}"></div></div>`).join("")}</div>
+      <div class="extra" id="ex${i}">${extra.map(col=>`<div class="m" style="margin-top:6px"><div class="et">${col.et}</div><div class="v" id="c-${i}-${col.k}"></div></div>`).join("")}</div></div>`).join("");
+    app.innerHTML = `<div class="barraest"><span>9:41</span><span class="ico">${SENAL}<span class="bat"></span></span></div>
+      <div class="cab1"><h1>Campañas</h1><div style="margin-left:auto;display:flex;gap:14px;align-items:center;color:#3b4457">${ICONO("busca",22)}<div class="ava" style="background:var(--marca);width:34px;height:34px">${ini}</div></div></div>
+      <div class="chipsA"><span>${T.negocio.length>20 ? T.negocio.slice(0,19)+'…' : T.negocio} ▾</span><span>${T.periodo}</span></div>
+      <div class="grafT tarj" id="grafica" ${T.grafica?'':'style="display:none"'}><div style="display:flex;justify-content:space-between;font-size:12.5px;color:#5b6477;font-weight:600">
+          <span>Gastado<br><b id="r-gasto" style="font-size:20px;color:#141a29">$0</b></span><span style="text-align:right">Resultados<br><b id="r-res" style="font-size:20px;color:#141a29">0</b></span></div>
+        <div style="position:absolute;left:14px;top:72px">${graf(402-24-28, 58)}</div></div>
+      <div class="lista" id="tabla" style="${T.grafica?'':'top:152px'}">${tarjetas}</div>`;
+    app.style.background = "#f3f4f7";
+  }
+  // recuadros y notas de cada resalte
+  T.resaltes.forEach((r,j)=>app.insertAdjacentHTML("beforeend", `<div class="recuadro" id="rq${j}"></div><div class="nota" id="nt${j}">${r.nota||''}</div>`));
+}
+
+function render(t, T, escena){
+  T = Object.assign({}, DEFAULT, T || {});
+  marca(T); firmaNeg(T);
+  const clave = JSON.stringify(T) + vertical();
+  if (clave !== CLAVE){ CLAVE = clave; construye(T); }
+  const v = vertical(), kc = prog(t, T.cuenta, 1.3);
+  // columnas que aparecen: se abren de ancho (16:9) o de alto (9:16)
+  T.columnas.forEach(col=>{
+    const a = col.aparece!=null ? prog(t, col.aparece, 0.5) : 1;
+    if (!v) document.querySelectorAll(`.celda[data-k="${col.k}"]`).forEach(e=>{ e.style.width = ((ANCHO[col.k]||124)*a) + "px"; e.style.opacity = a; e.style.padding = a<0.05 ? "0" : ""; });
+  });
+  if (v) T.campanas.slice(0,4).forEach((c,i)=>{ const ex = $("ex"+i); if (!ex) return;
+    const ap = T.columnas.find(c=>c.aparece!=null); const a = ap ? prog(t, ap.aparece + i*0.08, 0.45) : 0;
+    ex.style.maxHeight = (64*a) + "px"; ex.style.opacity = a; });
+  // números: cuentan juntos; los de columnas nuevas cuentan cuando aparecen
+  T.campanas.forEach((c,i)=>T.columnas.forEach(col=>{
+    const el = $(`c-${i}-${col.k}`); if (!el) return;
+    const p = col.fija ? 1 : col.aparece!=null ? prog(t, col.aparece+0.2, 1.0) : kc;
+    el.textContent = fmt(col.tipo, valor(c, col.k), p);
+    el.style.fontWeight = 600; el.style.color = "#141a29";
+  }));
+  // totales
+  T.columnas.forEach(col=>{
+    const el = $("t-"+col.k); if (!el) return;
+    const p = col.fija ? 1 : col.aparece!=null ? prog(t, col.aparece+0.2, 1.0) : kc;
+    let v2 = null;
+    if (["gasto","presupuesto","clientes"].includes(col.k)) v2 = T.campanas.reduce((s,c)=>s+(c[col.k]||0),0);
+    if (col.k==="cpc"){ const cl = T.campanas.reduce((s,c)=>s+(c.clientes||0),0), g = T.campanas.filter(c=>c.clientes).reduce((s,c)=>s+c.gasto,0); v2 = cl ? g/cl : null; }
+    el.textContent = v2==null ? "" : fmt(col.tipo, v2, p);
+  });
+  const gasto = T.campanas.reduce((s,c)=>s+c.gasto,0), res = T.campanas.filter(c=>c.tipo==="Mensajes").reduce((s,c)=>s+c.res,0);
+  if ($("r-gasto")){ $("r-gasto").textContent = pesos(Math.round(gasto*kc)); $("r-res").textContent = Math.round(res*kc).toLocaleString("es-MX") + (v ? "" : " mensajes"); }
+  // gráfica: la línea se dibuja de izquierda a derecha
+  const svg = $("svgG");
+  if (svg){ const w = +svg.getAttribute("width"), h = +svg.getAttribute("height"), g = prog(t, T.cuenta, 1.6);
+    $("clipR").setAttribute("width", w*g + 4);
+    const S = T.serie, mx = Math.max(...S)*1.15, fi = g*(S.length-1), i0 = Math.floor(fi), fr = fi - i0;
+    const y = S[i0] + ((S[Math.min(i0+1,S.length-1)] - S[i0])*fr);
+    const pto = $("ptoG"); pto.setAttribute("cx", w*g); pto.setAttribute("cy", h - y/mx*h); pto.style.opacity = g>0 ? 1 : 0; }
+  // resaltes: recuadro alrededor de la celda + nota; la celda se pone en el color de la marca
+  T.resaltes.forEach((r,j)=>{
+    const el = $(`c-${r.fila}-${r.col}`), rq = $("rq"+j), nt = $("nt"+j);
+    if (!el){ rq.style.opacity = 0; nt.style.opacity = 0; return; }
+    const caja = v ? el.parentElement : el.parentElement;
+    const b = posApp(caja), a = prog(t, r.t, 0.35) * (r.hasta!=null ? 1 - prog(t, r.hasta, 0.3) : 1);
+    const pad = v ? 3 : 4, alto = v ? b.h : 46, y0 = v ? b.y : b.y + (b.h-46)/2;
+    rq.style.left = (b.x - pad) + "px"; rq.style.top = (y0 - pad) + "px"; rq.style.width = (b.w + 2*pad) + "px"; rq.style.height = (alto + 2*pad) + "px";
+    rq.style.opacity = a; rq.style.transform = `scale(${1.25 - 0.25*ease((t-r.t)/0.35)})`;
+    nt.style.opacity = a;
+    const nw = nt.offsetWidth, nx = Math.max(6, Math.min(DISP.app.w - nw - 6, b.x + b.w/2 - nw/2));
+    const lado = r.lado || "arriba";
+    if (lado === "izquierda" || lado === "derecha"){
+      const lx = lado === "izquierda" ? b.x - pad - nw - 10 : b.x + b.w + pad + 10;
+      nt.style.left = lx + "px"; nt.style.top = (y0 + alto/2 - 15) + "px";
+    } else {
+      nt.style.left = nx + "px";
+      nt.style.top = (lado === "abajo" ? y0 + alto + pad + 8 + 6*(1-a) : y0 - pad - 36 - 6*(1-a)) + "px";
+    }
+    if (a > 0.01 && t >= r.t){ el.style.color = "var(--acento)"; el.style.fontWeight = 800; }
+  });
+  // cámara
+  let cam = T.camara;
+  if (!cam){
+    cam = T.resaltes.map(r=>({t:r.t-0.55, fila:r.fila, col:r.col, z: v?1.5:1.8}));
+    const ap = T.columnas.find(c=>c.aparece!=null);
+    if (ap && !v) cam.splice(1, 0, {t:ap.aparece-0.3, foco:"tabla", z:1.25});
+  }
+  camaraNeg(t, cam.map(k=>{ let foco = k.foco==="todo" ? null : k.foco;
+    if (k.fila!=null){ const el = $(`c-${k.fila}-${k.col}`); foco = el ? el.parentElement : ("fa"+k.fila); }
+    return {t:k.t, d:k.d, z:k.z, foco, dx: (k.fila!=null && !v) ? -40 : 0}; }));
+}
+</script></body></html>

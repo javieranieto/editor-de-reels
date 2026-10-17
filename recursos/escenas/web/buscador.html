@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ESCENA «buscador» (14-oct-2026). Alguien teclea una búsqueda letra por letra, salen las sugerencias, da Enter y
+aparecen los resultados: anuncios «Patrocinado», el bloque de negocios con mapa y estrellas, y resultados normales.
+Uno de los negocios se resalta y la cámara se acerca a él. 16:9 = ventana de navegador; 9:16 = teléfono.
+Estilo reconocible de buscador, SIN logos ni nombres de terceros. Negocios FICTICIOS.
+
+Campos de T (todos opcionales; se mezclan con DEFAULT):
+  marca       id de recursos/marcas/ (por defecto "ejemplo")                       colores y firma
+  firma       false para quitarla, o un texto propio
+  consulta    lo que se teclea                   "taller mecánico cerca de mí"
+  tTeclea     segundo en que empieza a teclear   0.35
+  porLetra    segundos por letra                 0.055
+  tBuscar     segundo del Enter (salen resultados) 2.1
+  tResalta    segundo en que se resalta el negocio y la cámara va hacia él   3.6
+  tClic       segundo del clic / toque sobre él  4.6  (null = sin clic)
+  destacado   índice del negocio resaltado (0, 1 o 2)   0
+  negocios    [{nombre, cal, resenas, tipo, dist, dir, horario, abierto, cita}]   3 negocios del bloque de mapa
+  anuncios    [{nombre, url, titulo, desc}]      1 o 2 anuncios «Patrocinado» (0 = sin anuncios)
+  organicos   [{sitio, url, titulo, desc}]       resultados normales
+  sugerencias lista de autocompletado (por omisión se arma de la consulta)
+  resultados  texto del conteo                   "Cerca de 1,240,000 resultados (0.42 segundos)"
+  hora        hora del teléfono                  "10:24"
+Ejemplo:  --T '{"consulta":"cerrajero 24 horas","destacado":1,"tResalta":3.4}'
+-->
+<link rel="stylesheet" href="../base/base.css">
+<link rel="stylesheet" href="web.css">
+<style>
+  #pag{position:absolute;left:0;top:0;right:0}
+  .horizontal #pag{height:1600px} .vertical #pag{height:2200px}
+  /* cabecera */
+  #caja{position:absolute;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #dfe1e5;z-index:5;
+    font-size:16px;color:#202124;white-space:nowrap}
+  .horizontal #caja{left:170px;top:20px;width:690px;height:46px;border-radius:24px;padding:0 18px}
+  .vertical #caja{left:14px;right:14px;top:64px;height:50px;border-radius:25px;padding:0 16px;font-size:17px}
+  #caja.foco{box-shadow:0 1px 6px rgba(32,33,36,.28);border-color:transparent}
+  #caja.abierta{border-radius:24px 24px 0 0;box-shadow:0 1px 6px rgba(32,33,36,.28);border-color:transparent}
+  #texto{flex:1;overflow:hidden;display:flex;align-items:center}
+  #caret{display:inline-block;width:1.5px;height:21px;background:#202124;margin-left:1px}
+  #sug{position:absolute;background:#fff;z-index:4;border-radius:0 0 24px 24px;box-shadow:0 4px 6px rgba(32,33,36,.28);padding:6px 0 14px;overflow:hidden}
+  .horizontal #sug{left:170px;top:66px;width:690px}
+  .vertical #sug{left:14px;right:14px;top:114px}
+  #sug div{display:flex;align-items:center;gap:14px;height:38px;padding:0 18px;font-size:16px;color:#202124}
+  #sug div.sel{background:#f1f3f4}
+  #sug b{font-weight:700}
+  #perfil{position:absolute;right:24px;top:27px;width:32px;height:32px;border-radius:50%;background:#7b61a8;color:#fff;font:600 15px var(--ui);display:flex;align-items:center;justify-content:center}
+  .vertical #perfil{display:none}
+  #pest{position:absolute;display:flex;gap:26px;font-size:14px;color:#5f6368;white-space:nowrap}
+  .horizontal #pest{left:186px;top:86px} .vertical #pest{left:20px;top:128px;gap:22px;font-size:15px}
+  #pest span{padding-bottom:10px}
+  #pest span.on{color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:600}
+  #raya{position:absolute;left:0;right:0;height:1px;background:#ebebeb}
+  .horizontal #raya{top:120px} .vertical #raya{top:162px}
+  #carga{position:absolute;left:0;top:0;height:3px;background:#1a73e8;z-index:20}
+  /* resultados */
+  #res{position:absolute}
+  .horizontal #res{left:170px;top:134px;width:652px}
+  .vertical #res{left:10px;right:10px;top:174px}
+  #conteo{font-size:14px;color:#70757a;margin-bottom:14px}
+  .vertical #conteo{display:none}
+  .r{margin-bottom:26px;position:relative}
+  .vertical .r{background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,.14);padding:14px 16px;margin-bottom:12px}
+  .pat{font-weight:700;font-size:14px;color:#202124;margin-bottom:6px}
+  .fuente{display:flex;align-items:center;gap:10px}
+  .ico-s{width:28px;height:28px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font:700 13px var(--ui);color:#fff;
+    box-shadow:0 0 0 1px #e8eaed inset}
+  .fuente .n{font-size:14px;color:#202124;line-height:1.25}
+  .fuente .u{font-size:12px;color:#4d5156;line-height:1.3}
+  .tit{font-size:20px;color:var(--azulweb);margin:7px 0 4px;line-height:1.3}
+  .vertical .tit{font-size:18px}
+  .des{font-size:14px;color:var(--gristexto);line-height:1.58}
+  .enl{display:flex;gap:18px;margin-top:6px;font-size:14px;color:var(--azulweb)}
+  /* bloque de negocios con mapa */
+  #pack{border:1px solid #dadce0;border-radius:14px;overflow:hidden;padding:0}
+  .vertical #pack{border:none}
+  #pack .cab{font-size:20px;color:#202124;padding:14px 18px 10px;font-weight:500}
+  #mini{position:relative;height:190px;background:#e9e5dc;overflow:hidden}
+  .vertical #mini{height:170px}
+  #mini svg{position:absolute;inset:0;width:100%;height:100%}
+  .mpin{position:absolute;width:26px;height:36px;margin:-34px 0 0 -13px}
+  .mpin .eti{position:absolute;left:28px;top:4px;font:600 12px var(--ui);color:#3c4043;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff}
+  .ent{display:flex;gap:16px;padding:14px 18px;border-top:1px solid #ebebeb;position:relative;background:#fff}
+  .vertical .ent{flex-wrap:wrap;padding:14px 16px}
+  .ent .izq{flex:1;min-width:0}
+  .ent .nom{font-size:17px;color:#1a0dab;line-height:1.3}
+  .vertical .ent .nom{color:#202124;font-weight:600}
+  .ent .lin{font-size:14px;color:var(--gristexto);margin-top:3px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ent .cal{color:#202124}
+  .ent .ab{color:var(--abierto)} .ent .ce{color:var(--cerrado)}
+  .ent .cita{font-style:italic}
+  .acc{display:flex;gap:18px;align-items:center}
+  .vertical .acc{width:100%;gap:8px}
+  .boton-c{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:#1a73e8;width:78px;white-space:nowrap}
+  .boton-c i{width:38px;height:38px;border-radius:50%;border:1px solid #dadce0;display:flex;align-items:center;justify-content:center}
+  .vertical .boton-c{flex-direction:row;width:auto;border:1px solid #dadce0;border-radius:18px;padding:6px 14px;font-size:14px;gap:6px}
+  .vertical .boton-c i{width:auto;height:auto;border:none}
+  #pack .mas{padding:12px 18px;border-top:1px solid #ebebeb;font-size:14px;color:#1a73e8;text-align:center}
+  .anillo{position:absolute;inset:0;pointer-events:none;z-index:3}
+  .vertical .tel-barra{background:#fff;left:14px;right:14px;top:14px;height:44px;padding:0 22px;border-radius:50px 50px 0 0}
+</style></head><body>
+<div class="firma" id="firma"></div>
+<div id="escena"><div id="disp"><div id="pantalla">
+  <div id="carga"></div>
+  <div id="pag">
+    <div id="caja"><svg width="20" height="20" viewBox="0 0 24 24" style="flex:none"><circle cx="10" cy="10" r="6.5" stroke="#9aa0a6" stroke-width="2.2" fill="none"/><path d="M15 15l5 5" stroke="#9aa0a6" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <span id="texto"></span>
+      <svg width="20" height="20" viewBox="0 0 24 24" style="flex:none"><rect x="9" y="3" width="6" height="11" rx="3" fill="#5f6368"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4" stroke="#5f6368" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+    <div id="perfil">J</div>
+    <div id="pest"><span class="on">Todo</span><span>Mapas</span><span>Imágenes</span><span>Noticias</span><span>Videos</span><span>Más</span></div>
+    <div id="raya"></div>
+    <div id="res"></div>
+  </div>
+  <div id="sug"></div>
+  <div id="dedo" class="toque"></div>
+</div></div></div>
+<script src="../base/base.js"></script>
+<script src="web.js"></script>
+<script>
+const DEFAULT = {
+  marca:"ejemplo", consulta:"taller mecánico cerca de mí", tTeclea:0.35, porLetra:0.055, tBuscar:2.1, tResalta:3.6, tClic:4.6,
+  destacado:0, hora:"10:24", resultados:"Cerca de 1,240,000 resultados (0.42 segundos)",
+  anuncios:[
+    {nombre:"AutoServicio Pro", url:"autoserviciopro.mx", titulo:"Taller Mecánico Certificado | Diagnóstico Sin Costo",
+     desc:"Afinación, frenos y suspensión. Cita el mismo día y garantía por escrito en cada servicio."},
+    {nombre:"Frenos y Más", url:"frenosymas.mx › servicios", titulo:"Frenos y Suspensión desde $899 | Atención Inmediata",
+     desc:"Revisión gratis de frenos con tu servicio. Abrimos sábados. Agenda por WhatsApp."}],
+  negocios:[
+    {nombre:"Taller Mecánico El Pistón", cal:4.8, resenas:175, tipo:"Taller mecánico", dist:"1.2 km", dir:"Av. Hidalgo 245",
+     horario:"Cierra 8 p.m.", abierto:true, cita:"“Me explicaron todo antes de cobrar”"},
+    {nombre:"Servicio Automotriz Rivera", cal:4.3, resenas:62, tipo:"Taller mecánico", dist:"2.0 km", dir:"Calle Morelos 88",
+     horario:"Cierra 7 p.m.", abierto:true, cita:"“Buen precio en la afinación”"},
+    {nombre:"Mecánica Express Norte", cal:3.9, resenas:28, tipo:"Taller de reparación", dist:"3.4 km", dir:"Blvd. Norte 1120",
+     horario:"Abre 9 a.m.", abierto:false, cita:"“Tardaron más de lo que dijeron”"}],
+  organicos:[
+    {sitio:"Directorio Automotriz", url:"directorioauto.mx › talleres", titulo:"Los mejores talleres mecánicos cerca de ti",
+     desc:"Compara opiniones, precios y horarios de talleres en tu zona antes de llevar tu auto."},
+    {sitio:"Guía del Conductor", url:"guiaconductor.mx › consejos", titulo:"Cómo elegir un taller mecánico de confianza",
+     desc:"Siete señales de que un taller te va a cobrar justo: presupuesto por escrito, garantía y reseñas reales."}],
+};
+const COLORES = ["#5b8def","#e8710a","#12a37f","#a142f4","#d93025"];
+const PIN = (c, s=1) => `<svg width="${26*s}" height="${36*s}" viewBox="0 0 26 36"><path d="M13 35s11-12.4 11-21.2A11 11 0 0 0 2 13.8C2 22.6 13 35 13 35z" fill="${c}" stroke="rgba(0,0,0,.25)" stroke-width="1"/><circle cx="13" cy="13.5" r="4.3" fill="#fff"/></svg>`;
+const ICO = {
+  web:'<svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#1a73e8" stroke-width="1.8" fill="none"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" stroke="#1a73e8" stroke-width="1.6" fill="none"/></svg>',
+  ruta:'<svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2l10 10-10 10L2 12z" fill="#1a73e8"/><path d="M9 15v-3h5V9.5l3 3-3 3V13h-3v2z" fill="#fff"/></svg>',
+  tel:'<svg width="17" height="17" viewBox="0 0 24 24"><path fill="#1a73e8" d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>'};
+// mapa chico del bloque de negocios (calles genéricas, un parque y un río)
+const MINI = `<svg viewBox="0 0 652 190" preserveAspectRatio="xMidYMid slice">
+  <rect width="652" height="190" fill="#ebe7df"/>
+  <path d="M0 150 C120 130 200 175 320 160 S520 120 652 140 L652 190 L0 190z" fill="#aadaff"/>
+  <rect x="430" y="18" width="120" height="70" rx="8" fill="#c8e6c0"/>
+  <g stroke="#fff" stroke-width="7" fill="none"><path d="M0 60H652M0 112H652M90 0V190M230 0V190M380 0V190M560 0V190"/></g>
+  <g stroke="#fff" stroke-width="3.5" fill="none"><path d="M0 30H652M0 86H652M160 0V190M300 0V190M480 0V190"/></g>
+  <path d="M0 60H652" stroke="#fde293" stroke-width="7"/><path d="M230 0V190" stroke="#fde293" stroke-width="7"/></svg>`;
+const MPOS = [[0.33,0.36],[0.68,0.62],[0.14,0.74]];   // dónde cae cada pin en el mapa chico (fracción)
+
+let armado = false;
+function armar(T){
+  const v = vertical() ? 'v' : 'h'; if (armado === v) return; armado = v;   // el HTML se arma por orientación
+  let h = `<div id="conteo">${esc(T.resultados)}</div>`;
+  T.anuncios.forEach((a,i)=>{
+    h += `<div class="r" data-i><div class="pat">Patrocinado</div><div class="fuente"><span class="ico-s" style="background:${COLORES[i+2]}">${esc(a.nombre[0])}</span>
+      <div><div class="n">${esc(a.nombre)}</div><div class="u">${esc(a.url)}</div></div></div>
+      <div class="tit">${esc(a.titulo)}</div><div class="des">${esc(a.desc)}</div></div>`;
+  });
+  h += `<div class="r" id="pack" data-i><div class="cab">Negocios</div><div id="mini">${MINI}`;
+  T.negocios.forEach((n,i)=>{ h += `<div class="mpin" id="mp${i}" style="left:${MPOS[i][0]*100}%;top:${MPOS[i][1]*100}%"></div>`; });
+  h += `</div>`;
+  T.negocios.forEach((n,i)=>{
+    const acc = vertical()
+      ? `<div class="acc"><span class="boton-c"><i>${ICO.tel}</i>Llamar</span><span class="boton-c"><i>${ICO.ruta}</i>Cómo llegar</span><span class="boton-c"><i>${ICO.web}</i>Sitio web</span></div>`
+      : `<div class="acc"><span class="boton-c"><i>${ICO.web}</i>Sitio web</span><span class="boton-c"><i>${ICO.ruta}</i>Cómo llegar</span></div>`;
+    h += `<div class="ent" id="ent${i}"><div class="anillo" id="an${i}"></div><div class="izq"><div class="nom">${esc(n.nombre)}</div>
+      <div class="lin"><span class="cal">${n.cal.toFixed(1)}</span> ${estrellas(n.cal,14)} <span>(${n.resenas})</span> · ${esc(n.tipo)}</div>
+      <div class="lin">${esc(n.dist)} · ${esc(n.dir)}</div>
+      <div class="lin"><span class="${n.abierto?'ab':'ce'}">${n.abierto?'Abierto':'Cerrado'}</span> · ${esc(n.horario)}</div>
+      <div class="lin cita">${esc(n.cita)}</div></div>${acc}</div>`;
+  });
+  h += `<div class="mas">Más negocios →</div></div>`;
+  T.organicos.forEach((o,i)=>{
+    h += `<div class="r" data-i><div class="fuente"><span class="ico-s" style="background:${COLORES[i]}">${esc(o.sitio[0])}</span>
+      <div><div class="n">${esc(o.sitio)}</div><div class="u">${esc(o.url)}</div></div></div>
+      <div class="tit">${esc(o.titulo)}</div><div class="des">${esc(o.desc)}</div></div>`;
+  });
+  $('res').innerHTML = h;
+}
+
+function render(t, T, escena){
+  T = Object.assign({}, DEFAULT, T || {});
+  const q = T.consulta, nL = q.length;
+  const tFin = T.tTeclea + nL*T.porLetra;
+  const g = montar(T, {titulo: t >= T.tBuscar ? `${q} - Buscar` : 'Nueva pestaña',
+                       omni: t >= T.tBuscar ? esc(q) : null, fav:'#8ab4f8', hora:T.hora});
+  armar(T);
+  const V = vertical();
+
+  // --- tecleo, cursor de texto y sugerencias
+  const n = Math.max(0, Math.min(nL, Math.floor((t - T.tTeclea)/T.porLetra)));
+  const parpadea = (t < T.tTeclea || t > tFin + 0.1) ? Math.floor(t*2.2) % 2 === 0 : true;
+  const escrito = q.slice(0, n);
+  $('texto').innerHTML = (n ? `<span style="white-space:pre">${esc(escrito)}</span>` : '<span style="color:#9aa0a6">Buscar</span>')
+     + (t < T.tBuscar ? `<span id="caret" style="opacity:${parpadea?1:0}"></span>` : '');
+  if (!n && t < T.tBuscar){ const tx = $('texto'); tx.insertBefore($('caret'), tx.firstChild); }
+  const sugs = T.sugerencias || [q, q + ' abierto ahora', q + ' precios', q + ' opiniones', q.split(' ').slice(0,2).join(' ') + ' 24 horas'];
+  const verSug = n > 0 && t < T.tBuscar - 0.02;
+  const caja = $('caja'); caja.className = verSug ? 'abierta' : (t < T.tBuscar + 0.2 ? 'foco' : '');
+  const sel = t >= T.tBuscar - 0.28;
+  const pref = escrito.toLowerCase();
+  const lista = sugs.filter(s => s.toLowerCase().startsWith(pref)).slice(0, 5);
+  if (!lista.length) lista.push(escrito);
+  $('sug').style.display = verSug ? '' : 'none';
+  $('sug').innerHTML = lista.map((s,i)=>`<div class="${sel && i===0 ? 'sel':''}"><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none"><circle cx="10" cy="10" r="6.5" stroke="#9aa0a6" stroke-width="2.2" fill="none"/><path d="M15 15l5 5" stroke="#9aa0a6" stroke-width="2.2" stroke-linecap="round"/></svg>
+     <span>${esc(s.slice(0, escrito.length))}<b>${esc(s.slice(escrito.length))}</b></span></div>`).join('');
+
+  // --- carga y resultados en cascada
+  const c = prog(t, T.tBuscar, 0.45);
+  $('carga').style.width = (c*100) + '%'; $('carga').style.opacity = (t >= T.tBuscar && c < 1) ? 1 : 0;
+  const bloques = [$('conteo'), ...document.querySelectorAll('#res > .r')];
+  bloques.forEach((b,i)=>{ const k = t < T.tBuscar ? 0 : entra(b, t, T.tBuscar + 0.28 + 0.11*i, 0.4, 24); b.style.opacity = k; });
+  ['pest','raya'].forEach(id => $(id).style.opacity = t < T.tBuscar ? 0.0 : prog(t, T.tBuscar + 0.15, 0.3));
+
+  // --- pins del mapa chico: caen con rebote; el destacado se pinta con el acento y crece
+  const acento = getComputedStyle(document.body).getPropertyValue('--acento').trim();
+  const kR = prog(t, T.tResalta, 0.5);
+  T.negocios.forEach((nn,i)=>{
+    const a = T.tBuscar + 0.28 + 0.11*(T.anuncios.length + 1) + 0.12*i;
+    const r = resorte(t, a, 0.5), d = i === T.destacado;
+    const el = $('mp'+i), s = d ? 1 + 0.45*kR : 1;
+    el.innerHTML = PIN(d && kR > 0.02 ? acento : '#ea4335', 1) + (V ? '' : `<span class="eti">${esc(nn.nombre)}</span>`);
+    el.style.opacity = t < a ? 0 : Math.min(1, (t-a)/0.12);
+    el.style.transform = `translateY(${-60*(1-r)}px) scale(${s})`; el.style.transformOrigin = '13px 34px';
+    el.style.zIndex = d ? 3 : 1;
+    const an = $('an'+i), ent = $('ent'+i);
+    if (d){
+      an.style.boxShadow = `inset 0 0 0 ${3*kR}px ${acento}`;
+      ent.style.background = `color-mix(in srgb, ${acento} ${8*kR}%, #fff)`;
+      ent.style.zIndex = 2;
+    } else { an.style.boxShadow = 'none'; ent.style.background = '#fff'; ent.style.transform = 'none'; }
+  });
+
+  // --- desplazamiento de la página para que el negocio destacado quede a la vista
+  const dEl = $('ent'+T.destacado), pd = pos(dEl), pant = $('pantalla');
+  const visible = pant.offsetHeight, total = $('pag').offsetHeight;
+  const meta = Math.max(0, Math.min(total - visible, pd.cy - pant.offsetTop - visible*(V ? 0.48 : 0.55)));
+  const sc = meta * eio((t - (T.tResalta - 1.0)) / 0.9);
+  $('pag').style.transform = `translateY(${-sc}px)`;
+
+  // --- cámara: cerca de la caja mientras teclea; atrás al salir resultados; se acerca al destacado
+  const cj = pos(caja), dy = pd.cy - sc;
+  const tR = T.tResalta;
+  if (V) camino(t, [[0, 1.42, 215, cj.cy + 190, 540, 640], [T.tBuscar, 1.48, 215, cj.cy + 200, 540, 640],
+                    [T.tBuscar + 0.7, 1.25, 215, 450], [tR - 0.1, 1.27, 215, 450], [tR + 0.8, 1.95, 215, dy, 540, 640]]);
+  else camino(t, [[0, 1.32, cj.x + 345, cj.cy + 120], [T.tBuscar, 1.40, cj.x + 345, cj.cy + 120],
+                  [T.tBuscar + 0.7, 0.92, 640, 470], [tR - 0.1, 0.94, 640, 470], [tR + 0.8, 1.85, pd.x + 330, dy, 960, 560]]);
+  girar(t, T.tResalta + 1.5);
+
+  // --- puntero (navegador) o toque (teléfono) sobre el destacado
+  if (T.tClic != null){
+    const nom = dEl.querySelector('.nom'), pn = pos(nom);
+    const mx = pn.x + Math.min(pn.w, 220)*0.6, my = pn.cy - sc - 4;
+    const km = eio((t - (T.tClic - 0.9)) / 0.8), kc = t >= T.tClic ? Math.min(1, (t - T.tClic)/0.45) : 0;
+    cursor(entre(pd.x + 560, mx, km), entre(dy + 170, my, km), kc, prog(t, T.tClic - 1.0, 0.3));
+    toque($('dedo'), pn.x + 70 - 14, pn.cy - sc - 14, kc);
+  } else { cursor(0,0,0,0); toque($('dedo'),0,0,0); }
+}
+</script></body></html>

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- Gancho de un largo, versión «teléfono real»: que se vea como lo que pasa en el teléfono, no como una
+diapositiva. Chat de ESTILO WhatsApp, sin su logo ni su
+nombre. render(t) pinta el estado exacto del segundo t (lo llama render.py cuadro por cuadro). -->
+<style>
+  :root{--verde:#25d366;--verdeosc:#008069;--gris:#667781;--tick:#8696a0;--azul:#53bdeb}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:#0d1322;font-family:"Segoe UI",Roboto,Arial,sans-serif}
+  #fondo{position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 50% 45%,#2a3a60 0%,#141c30 55%,#0a0f1c 100%)}
+  #luz{position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(255,106,61,.10),transparent 40%)}
+  #firma{position:absolute;left:80px;top:60px;font:500 24px "Roboto Mono",Consolas,monospace;color:#9aa6c0;letter-spacing:.06em}
+  #escena{position:absolute;left:50%;top:50%;width:430px;height:900px;margin:-450px 0 0 -215px;perspective:1800px}
+  #tel{position:absolute;inset:0;border-radius:64px;background:#111;padding:14px;transform-style:preserve-3d;
+       box-shadow:0 60px 120px rgba(0,0,0,.55),0 20px 40px rgba(0,0,0,.4),inset 0 0 0 2px #3a3a3a,inset 0 0 0 5px #0b0b0b}
+  #brillo{position:absolute;inset:0;border-radius:64px;pointer-events:none;
+          background:linear-gradient(115deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 35%,rgba(255,255,255,0) 70%,rgba(255,255,255,.05) 100%)}
+  #pantalla{position:relative;width:100%;height:100%;border-radius:50px;overflow:hidden;background:#fff}
+  #isla{position:absolute;top:12px;left:50%;width:120px;height:34px;margin-left:-60px;border-radius:20px;background:#000;z-index:20}
+  .barra{position:absolute;top:0;left:0;right:0;height:56px;display:flex;justify-content:space-between;align-items:center;padding:8px 34px 0;font-weight:600;font-size:17px;z-index:15}
+  .barra .ico{display:flex;gap:6px;align-items:center}
+  .bat{width:26px;height:12px;border:2px solid currentColor;border-radius:4px;position:relative}
+  .bat::after{content:"";position:absolute;inset:1px;right:7px;background:currentColor;border-radius:1px}
+  /* bloqueo */
+  #bloqueo{position:absolute;inset:0;background:linear-gradient(160deg,#1f2d4f,#0f1629 60%,#2b1d2c);color:#fff;z-index:10}
+  #bloqueo .fecha{position:absolute;top:120px;width:100%;text-align:center;font-size:21px;font-weight:600;opacity:.9}
+  #bloqueo .hora{position:absolute;top:146px;width:100%;text-align:center;font-size:110px;font-weight:700;letter-spacing:-2px}
+  /* chats */
+  #chats{position:absolute;inset:0;background:#fff;color:#111b21}
+  #chats .tit{position:absolute;top:66px;left:22px;font-size:32px;font-weight:700}
+  #chats .busca{position:absolute;top:120px;left:18px;right:18px;height:42px;border-radius:21px;background:#f0f2f5;color:#8696a0;font-size:17px;padding:10px 18px}
+  #chats .filtros{position:absolute;top:176px;left:18px;display:flex;gap:8px;font-size:15px}
+  #chats .filtros span{padding:6px 14px;border-radius:16px;background:#f0f2f5;color:#54656f}
+  #chats .filtros span.on{background:#d9fdd3;color:#008069;font-weight:600}
+  .fila{position:absolute;left:0;right:0;height:84px;display:flex;align-items:center;padding:0 18px;gap:14px;background:#fff}
+  .av{width:54px;height:54px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:28px}
+  .txt{flex:1;min-width:0;border-bottom:1px solid #eef0f1;height:84px;display:flex;flex-direction:column;justify-content:center}
+  .l1{display:flex;justify-content:space-between;align-items:baseline}
+  .nom{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t{font-size:13px;color:var(--gris)}
+  .t.nuevo{color:var(--verde);font-weight:600}
+  .l2{display:flex;justify-content:space-between;align-items:center;margin-top:3px}
+  .ult{font-size:15px;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px}
+  .ult.escr{color:var(--verde);font-style:italic}
+  .badge{min-width:22px;height:22px;border-radius:11px;background:var(--verde);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 6px}
+  .tk{display:inline-block;width:18px;height:12px;position:relative;flex:none}
+  .tk svg{position:absolute;inset:0}
+  /* notificación */
+  #noti{position:absolute;left:12px;right:12px;top:-140px;height:96px;border-radius:24px;z-index:30;
+        background:rgba(245,245,247,.92);backdrop-filter:blur(18px);box-shadow:0 12px 30px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px;padding:0 16px}
+  #noti .ap{width:44px;height:44px;border-radius:12px;background:var(--verde);display:flex;align-items:center;justify-content:center;flex:none}
+  #noti .n1{font-size:16px;font-weight:700;color:#111}
+  #noti .n2{font-size:15px;color:#333;margin-top:2px}
+  #noti .ahora{position:absolute;right:18px;top:16px;font-size:13px;color:#8a8a8e}
+</style></head><body>
+<div id="fondo"></div><div id="luz"></div>
+<div id="firma"></div>
+<div id="escena"><div id="tel"><div id="pantalla">
+  <div id="isla"></div>
+  <div id="bloqueo"><div class="barra" style="color:#fff"><span></span><span class="ico">▂▄▆ <span class="bat"></span></span></div>
+    <div class="fecha">martes, 20 de octubre</div><div class="hora" id="hb">9:00</div></div>
+  <div id="chats">
+    <div class="barra" style="color:#111"><span id="hc">9:00</span><span class="ico">▂▄▆ <span class="bat"></span></span></div>
+    <div class="tit">Chats</div><div class="busca">Buscar</div>
+    <div class="filtros"><span class="on">Todos</span><span>No leídos</span><span>Favoritos</span><span>Grupos</span></div>
+    <div id="filas"></div>
+  </div>
+  <div id="noti"><div class="ap"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="#fff" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2z"/></svg></div>
+    <div><div class="n1">Consultorio Dental Centro</div><div class="n2">Sí, claro. Te esperamos a las 9:30.</div></div><div class="ahora">ahora</div></div>
+</div><div id="brillo"></div></div></div>
+<script>
+const TK = c => `<span class="tk"><svg viewBox="0 0 18 12"><path d="M1 6.5l3 3 6-7" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M7 9.5l1 0.2 6-7" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></span>`;
+const FILAS = [
+  {nom:"Consultorio Dental Centro", av:"#d9fdd3", e:"🦷"},
+  {nom:"Clínica Dental Norte",      av:"#e7f0ff", e:"🦷"},
+  {nom:"Dr. Ruiz · Dentista",       av:"#fff1e6", e:"🦷"},
+  {nom:"Mamá",                      av:"#f3e8ff", e:"👩", fijo:true, ult:"Ya llegaste?", h:"8:12 p.m."},
+  {nom:"Trabajo",                   av:"#eef0f1", e:"💼", fijo:true, ult:"Mañana a las 9", h:"6:40 p.m."},
+];
+const ease = x => x<=0?0:x>=1?1:1-Math.pow(1-x,3);
+const prog = (t,a,d) => ease((t-a)/d);
+function render(t, T){ const _f = document.getElementById("firma"); if (_f) _f.textContent = (window.MARCAS && (window.MARCAS[(T && T.marca) || "ejemplo"] || {}).firma) || "";
+  // cámara: se acerca despacio; leve giro 3D; pequeño golpe al llegar la notificación
+  // CÁMARA: el teléfono solo es chico en 16:9 y las letras no se leen. Se acerca a lo que importa:
+  // reloj -> los tres chats al mandar -> la notificación y el chat que contestó. (punto de foco en px del teléfono)
+  const k1 = prog(t,T.esc-0.25,0.7), k2 = prog(t,T.diez-0.1,0.5);
+  let s = 1.10 + 0.04*ease(t/2.6), px = 215, py = 230;
+  s += (1.55-1.14)*k1; py += (370-230)*k1;
+  s += (1.95-1.55)*k2; py += (215-370)*k2;
+  const esc = document.getElementById('escena');
+  esc.style.transformOrigin = `${px}px ${py}px`;
+  esc.style.transform = `translate(${960-(745+px)}px, ${540-(90+py)}px) scale(${s})`;
+  const gy = -12 + 9*ease(t/6.4), gx = 5 - 3*ease(t/6.4);
+  const golpe = (t>T.diez-0.05 && t<T.diez+0.25) ? Math.sin((t-T.diez)*60)*0.8*(1-(t-T.diez+0.05)/0.3) : 0;
+  document.getElementById('tel').style.transform = `rotateY(${gy}deg) rotateX(${gx}deg) rotateZ(${golpe}deg)`;
+  // desbloqueo: la pantalla bloqueada sube al escribir
+  const des = prog(t,T.esc-0.25,0.45);
+  const bl = document.getElementById('bloqueo'); bl.style.transform=`translateY(${-100*des}%)`; bl.style.opacity = 1-0.3*des;
+  const hora = t>=T.diez-0.05 ? "9:10" : "9:00";
+  document.getElementById('hb').textContent = hora; document.getElementById('hc').textContent = hora;
+  // filas: los tres consultorios entran arriba al mandarles el mensaje (uno tras otro)
+  let html = ""; const y0 = 226;
+  const env = [T.esc+0.15, T.esc+0.45, T.esc+0.75];
+  const orden = [0,1,2,3,4];
+  orden.forEach((k,pos)=>{
+    const f = FILAS[k];
+    let ult, h, extra="", tnuevo="", op=1, dy=0;
+    if (f.fijo){ ult = f.ult; h = f.h; }
+    else {
+      const a = prog(t, env[k], 0.25); op = 0.35+0.65*a; dy = 16*(1-a);
+      const leido = k===1 && t>=T.uno+0.3;                  // el 2 lo VIO y no contesta: palomitas azules
+      ult = (a>0 ? TK(leido?"#53bdeb":"#8696a0") : "") + "Me duele una muela. ¿Tienen cita hoy?"; h = a>0 ? "9:00 p.m." : "ayer";
+      if (k===2 && t>=T.uno && t<T.diez+0.6){ ult = "escribiendo…"; extra="escr"; }
+      if (k===0 && t>=T.diez-0.05){ ult = "Sí, claro. Te esperamos a las 9:30."; h="9:10 p.m."; tnuevo="nuevo"; }
+    }
+    const badge = (k===0 && t>=T.diez-0.05) ? `<span class="badge" style="transform:scale(${0.4+0.6*prog(t,T.diez-0.05,0.25)})">1</span>` : "";
+    html += `<div class="fila" style="top:${y0+pos*84+dy}px;opacity:${op}"><div class="av" style="background:${f.av}">${f.e}</div>
+      <div class="txt"><div class="l1"><span class="nom">${f.nom}</span><span class="t ${tnuevo}">${h}</span></div>
+      <div class="l2"><span class="ult ${extra}">${ult}</span>${badge}</div></div></div>`;
+  });
+  document.getElementById('filas').innerHTML = html;
+  // la notificación baja desde arriba cuando contesta el 1
+  const n = prog(t,T.diez-0.1,0.35);
+  document.getElementById('noti').style.top = (-140 + 190*n) + "px";
+}
+</script></body></html>

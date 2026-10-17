@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- LISTA DE CHATS CONFIGURABLE (15-oct-2026). horizontal.html tiene su historia escrita en el código; esta lee TODO de
+T, así que sirve para cualquier historia de mensajes. 16:9 o 9:16 (--vertical). Chat de ESTILO WhatsApp, sin
+su logo ni su nombre. Datos de EJEMPLO siempre inventados (nunca un chat real de un cliente).
+T = {
+  marca: id de recursos/marcas/ (por defecto "ejemplo"),
+  fecha: "jueves, 15 de octubre",
+  horas: [{t, h}]                        reloj de la barra (el último cuyo t ya pasó)
+  bloqueo: {hasta}                       (opcional) pantalla bloqueada que sube en «hasta»
+  filas: [{nom, e, av, ult, h, entra, ev:[{t, ult, h, tick, escr, badge, nuevo, mio}]}]
+         en orden de arriba a abajo. entra: segundo en que aparece (si falta, desde el inicio).
+         ev: cambios de esa fila en su segundo. tick: "gris" | "azul" | "" (palomitas del que manda); escr: "escribiendo…"
+  noti:  [{t, hasta, nom, txt}]          notificación que baja desde arriba
+  sello: [{t, fila, txt, tipo}]          etiqueta pegada a una fila; tipo "bien" (verde) | "mal" (rojo)
+  rotulo:[{t, hasta, txt, sub, tipo}]    texto GRANDE fuera del teléfono (la hora, «4 horas después»); tipo "acento" | ""
+  cam:   [{t, s, py}]                    cámara: escala y punto vertical del teléfono (px) que va al centro; se interpola
+} -->
+<link rel="stylesheet" href="../base/base.css">
+<link rel="stylesheet" href="telefono.css">
+<style>
+  html,body{width:100vw;height:100vh}
+  #fondo{background:radial-gradient(ellipse 60% 70% at 50% 45%,var(--fondo1) 0%,var(--fondo2) 55%,var(--fondo3) 100%)}
+  #luz{background:radial-gradient(circle at 30% 20%,color-mix(in srgb,var(--acento) 12%,transparent),transparent 40%)}
+  #firma{font-family:var(--mono);color:var(--tenue)}
+  #escena{left:0;top:0;margin:0}
+  #bloqueo{position:absolute;inset:0;background:linear-gradient(160deg,#1f2d4f,#0f1629 60%,#2b1d2c);color:#fff;z-index:10}
+  #bloqueo .fecha{position:absolute;top:120px;width:100%;text-align:center;font-size:21px;font-weight:600;opacity:.9}
+  #bloqueo .hora{position:absolute;top:146px;width:100%;text-align:center;font-size:110px;font-weight:700;letter-spacing:-2px}
+  #chats{position:absolute;inset:0;background:#fff;color:#111b21}
+  #chats .tit{position:absolute;top:66px;left:22px;font-size:32px;font-weight:700}
+  #chats .busca{position:absolute;top:120px;left:18px;right:18px;height:42px;border-radius:21px;background:#f0f2f5;color:#8696a0;font-size:17px;padding:10px 18px}
+  #chats .filtros{position:absolute;top:176px;left:18px;display:flex;gap:8px;font-size:15px}
+  #chats .filtros span{padding:6px 14px;border-radius:16px;background:#f0f2f5;color:#54656f}
+  #chats .filtros span.on{background:#d9fdd3;color:#008069;font-weight:600}
+  .fila{position:absolute;left:0;right:0;height:84px;display:flex;align-items:center;padding:0 18px;gap:14px;background:#fff}
+  .av{width:54px;height:54px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:28px}
+  .txt{flex:1;min-width:0;border-bottom:1px solid #eef0f1;height:84px;display:flex;flex-direction:column;justify-content:center}
+  .l1{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .nom{font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t{font-size:13px;color:var(--gris);flex:none}
+  .t.nuevo{color:var(--verde);font-weight:600}
+  .l2{display:flex;justify-content:space-between;align-items:center;margin-top:3px;gap:8px}
+  .ult{font-size:15px;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px}
+  .ult.escr{color:var(--verde);font-style:italic}
+  .badge{min-width:22px;height:22px;border-radius:11px;background:var(--verde);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 6px;flex:none}
+  .tk{display:inline-block;width:18px;height:12px;position:relative;flex:none}
+  .tk svg{position:absolute;inset:0}
+  .sello{position:absolute;right:96px;top:10px;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;letter-spacing:.02em;color:#fff;
+         transform-origin:right center;box-shadow:0 4px 10px rgba(0,0,0,.18)}
+  .sello.bien{background:#1fa855} .sello.mal{background:#e5484d}
+  .fila.marca-bien{background:#effbf2} .fila.marca-mal{background:#fff1f1}
+  #noti{position:absolute;left:12px;right:12px;top:-140px;height:96px;border-radius:24px;z-index:30;
+        background:rgba(245,245,247,.94);box-shadow:0 12px 30px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px;padding:0 16px}
+  #noti .ap{width:44px;height:44px;border-radius:12px;background:var(--verde);display:flex;align-items:center;justify-content:center;flex:none}
+  #noti .n1{font-size:16px;font-weight:700;color:#111}
+  #noti .n2{font-size:15px;color:#333;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
+  #noti .ahora{position:absolute;right:18px;top:16px;font-size:13px;color:#8a8a8e}
+  #rotulo{position:absolute;z-index:60;font-family:var(--titulos);font-weight:700;color:var(--texto);text-shadow:0 8px 30px rgba(0,0,0,.45)}
+  #rotulo .r1{font-size:96px;line-height:1.02;white-space:pre-line}
+  #rotulo .r2{font:500 30px var(--mono);letter-spacing:.06em;color:var(--tenue);margin-top:14px;text-transform:uppercase}
+  #rotulo.acento .r1{color:var(--acento)}
+</style></head><body>
+<div id="fondo"></div><div id="luz"></div>
+<div id="firma"></div>
+<div id="rotulo"><div class="r1"></div><div class="r2"></div></div>
+<div id="escena"><div id="tel"><div id="pantalla">
+  <div id="isla"></div>
+  <div id="bloqueo"><div class="barra" style="color:#fff"><span></span><span class="ico">▂▄▆ <span class="bat"></span></span></div>
+    <div class="fecha" id="fe"></div><div class="hora" id="hb"></div></div>
+  <div id="chats">
+    <div class="barra" style="color:#111"><span id="hc"></span><span class="ico">▂▄▆ <span class="bat"></span></span></div>
+    <div class="tit">Chats</div><div class="busca">Buscar</div>
+    <div class="filtros"><span class="on">Todos</span><span>No leídos</span><span>Favoritos</span><span>Grupos</span></div>
+    <div id="filas"></div>
+  </div>
+  <div id="noti"><div class="ap"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="#fff" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2z"/></svg></div>
+    <div><div class="n1"></div><div class="n2"></div></div><div class="ahora">ahora</div></div>
+</div><div id="brillo"></div></div></div>
+<script src="../base/base.js"></script>
+<script>
+const TK = c => `<span class="tk"><svg viewBox="0 0 18 12"><path d="M1 6.5l3 3 6-7" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M7 9.5l1 0.2 6-7" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></span>`;
+const ultimo = (lista, t) => { let r = null; (lista||[]).forEach(x => { if (t >= x.t) r = x; }); return r; };
+const vigente = (lista, t) => (lista||[]).filter(x => t >= x.t && (x.hasta == null || t < x.hasta)).pop() || null;
+function camaraEn(cam, t){                       // interpola entre llaves con suavizado
+  if (!cam || !cam.length) return {s: 1.1, py: 400};
+  if (t <= cam[0].t) return cam[0];
+  for (let i = 0; i < cam.length - 1; i++){
+    const a = cam[i], b = cam[i+1];
+    if (t < b.t){ const k = ease(Math.min(1, (t - a.t) / Math.min(0.7, b.t - a.t))); return {s: a.s + (b.s-a.s)*k, py: a.py + (b.py-a.py)*k}; }
+  }
+  return cam[cam.length-1];
+}
+function render(t, T){
+  marca(T);
+  const W = innerWidth, H = innerHeight, V = H > W;
+  $('firma').textContent =firmaMarca(T);
+  Object.assign($('firma').style, V ? {left:'70px', top:'90px', fontSize:'26px'} : {left:'80px', top:'60px', fontSize:'24px'});
+  // cámara: el teléfono (430x900) se escala y el punto py del teléfono va al centro (en 16:9, un poco a la derecha si hay rótulo)
+  const c = camaraEn(T.cam, t), px = 215, cx = V ? W/2 : (T.rotulo && T.rotulo.length ? W*0.63 : W/2), cy = V ? H*0.62 : H/2;
+  const esc = $('escena'); esc.style.width = '430px'; esc.style.height = '900px';
+  esc.style.transformOrigin = '0 0';
+  esc.style.transform = `translate(${cx - px*c.s}px, ${cy - c.py*c.s}px) scale(${c.s})`;
+  $('tel').style.transform = `rotateY(${-10 + 6*ease(t/8)}deg) rotateX(${4 - 2*ease(t/8)}deg)`;
+  // reloj
+  const h = ultimo(T.horas, t); $('hb').textContent = h ? h.h : ''; $('hc').textContent = h ? h.h : ''; $('fe').textContent = T.fecha || '';
+  const des = T.bloqueo ? prog(t, T.bloqueo.hasta - 0.2, 0.45) : 1;
+  $('bloqueo').style.transform = `translateY(${-100*des}%)`; $('bloqueo').style.display = des >= 1 ? 'none' : 'block';
+  // filas
+  let html = ''; const y0 = 226; const sellos = T.sello || [];
+  (T.filas || []).forEach((f, pos) => {
+    const a = f.entra == null ? 1 : prog(t, f.entra, 0.3); if (a <= 0) return;
+    let st = {ult: f.ult || '', h: f.h || '', tick: f.tick || '', escr: false, badge: 0, nuevo: false};
+    (f.ev || []).forEach(e => { if (t >= e.t) st = Object.assign({}, st, {escr: false, badge: 0, nuevo: false}, e); });
+    const tk = st.tick ? TK(st.tick === 'azul' ? '#53bdeb' : '#8696a0') : '';
+    const ult = st.escr ? 'escribiendo…' : tk + st.ult;
+    const s = vigente(sellos.filter(x => x.fila === pos).map(x => Object.assign({hasta: null}, x)), t);
+    const ks = s ? resorte(t, s.t, 0.45) : 0;
+    const badge = st.badge ? `<span class="badge">${st.badge}</span>` : '';
+    html += `<div class="fila ${s ? 'marca-' + s.tipo : ''}" style="top:${y0 + pos*84 + 18*(1-a)}px;opacity:${a}"><div class="av" style="background:${f.av||'#eef0f1'}">${f.e||''}</div>
+      <div class="txt"><div class="l1"><span class="nom">${f.nom}</span><span class="t ${st.nuevo ? 'nuevo' : ''}">${st.h}</span></div>
+      <div class="l2"><span class="ult ${st.escr ? 'escr' : ''}">${ult}</span>${badge}</div></div>
+      ${s ? `<span class="sello ${s.tipo}" style="transform:scale(${Math.min(1.15, 0.3 + 0.7*ks)})">${s.txt}</span>` : ''}</div>`;
+  });
+  $('filas').innerHTML = html;
+  // notificación
+  const n = vigente(T.noti, t), no = $('noti');
+  if (n){ no.querySelector('.n1').textContent = n.nom; no.querySelector('.n2').textContent = n.txt;
+          const k = prog(t, n.t, 0.35) * (n.hasta != null ? 1 - prog(t, n.hasta - 0.3, 0.3) : 1); no.style.top = (-140 + 190*k) + 'px'; }
+  else no.style.top = '-140px';
+  // rótulo grande fuera del teléfono
+  const r = vigente(T.rotulo, t), ro = $('rotulo');
+  if (r){ ro.className = r.tipo || ''; ro.querySelector('.r1').textContent = r.txt; ro.querySelector('.r2').textContent = r.sub || '';
+          const k = prog(t, r.t, 0.3) * (r.hasta != null ? 1 - prog(t, r.hasta - 0.2, 0.2) : 1);
+          ro.style.opacity = k; ro.style.transform = `translateY(${24*(1-k)}px)`;
+          Object.assign(ro.style, V ? {left:"70px", right:"70px", top:"190px", textAlign:"left"} : {left:'130px', top:(H*0.36)+'px', width:'640px'}); }
+  else ro.style.opacity = 0;
+}
+</script></body></html>

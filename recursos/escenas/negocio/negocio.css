@@ -1,0 +1,88 @@
+/* Escenas de NEGOCIO (agenda, CRM, anuncios) — 14-oct-2026.
+   El dispositivo (laptop en 16:9, tablet o teléfono en 9:16) y el «software» genérico que va dentro.
+   Estilo de programa real, SIN logos ni nombres de terceros. Se usa junto con ../base/base.css y dispositivo.js. */
+
+/* ---------- escena y dispositivo ---------- */
+body .firma{z-index:0}
+#ventana{position:fixed;inset:0;z-index:1}
+#escena{position:absolute;left:0;top:0;perspective:3200px;transform-origin:0 0}
+#disp{position:absolute;left:0;top:0;transform-style:preserve-3d}
+#piso{position:absolute;border-radius:50%;background:radial-gradient(ellipse at center,rgba(0,0,0,.55),rgba(0,0,0,0) 70%);filter:blur(18px)}
+#pantalla{position:absolute;overflow:hidden;background:#f5f6f8}
+#app{position:absolute;inset:0;overflow:hidden;font-family:"Segoe UI",system-ui,Arial,sans-serif;color:#1d2433;
+     font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+#brillo{position:absolute;pointer-events:none;z-index:40}
+
+/* laptop: tapa con bisel negro + base de aluminio */
+.laptop #tapa{position:absolute;left:78px;top:0;width:1324px;height:848px;border-radius:26px 26px 10px 10px;background:#0c0d10;
+  box-shadow:0 70px 140px rgba(0,0,0,.55),0 24px 50px rgba(0,0,0,.35),inset 0 0 0 2px #2b2d33,inset 0 0 0 4px #0c0d10}
+.laptop #pantalla{left:100px;top:26px;width:1280px;height:800px;border-radius:6px}
+.laptop #camarita{position:absolute;left:740px;top:10px;width:8px;height:8px;border-radius:50%;background:#1d2230;box-shadow:inset 0 0 0 2px #0a0b0e}
+.laptop #base{position:absolute;left:0;top:846px;width:1480px;height:30px;border-radius:2px 2px 26px 26px;
+  background:linear-gradient(180deg,#e3e5ea 0%,#b9bcc4 38%,#8c9099 100%);box-shadow:0 18px 30px rgba(0,0,0,.45)}
+.laptop #base::before{content:"";position:absolute;left:640px;top:0;width:200px;height:11px;border-radius:0 0 12px 12px;background:linear-gradient(180deg,#a7abb3,#c9ccd2)}
+.laptop #brillo{left:78px;top:0;width:1324px;height:848px;border-radius:26px 26px 10px 10px;
+  background:linear-gradient(120deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 30%,rgba(255,255,255,0) 72%,rgba(255,255,255,.04) 100%)}
+
+/* tablet y teléfono: marco negro redondeado */
+.tablet #tapa,.telefono #tapa{position:absolute;inset:0;background:#0f1013;
+  box-shadow:0 60px 120px rgba(0,0,0,.55),0 20px 40px rgba(0,0,0,.4),inset 0 0 0 2px #3a3b40,inset 0 0 0 5px #0b0b0b}
+.tablet #tapa{border-radius:46px} .tablet #pantalla{left:24px;top:24px;width:760px;height:1060px;border-radius:24px}
+.tablet #brillo{inset:0;border-radius:46px;background:linear-gradient(115deg,rgba(255,255,255,.09) 0%,rgba(255,255,255,0) 32%,rgba(255,255,255,0) 72%,rgba(255,255,255,.04) 100%)}
+.telefono #tapa{border-radius:64px} .telefono #pantalla{left:14px;top:14px;width:402px;height:872px;border-radius:50px}
+.telefono #isla{position:absolute;top:12px;left:50%;width:118px;height:33px;margin-left:-59px;border-radius:20px;background:#000;z-index:30}
+.telefono #brillo{inset:0;border-radius:64px;background:linear-gradient(115deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 35%,rgba(255,255,255,0) 70%,rgba(255,255,255,.05) 100%)}
+.barraest{position:absolute;top:0;left:0;right:0;height:52px;display:flex;justify-content:space-between;align-items:center;
+  padding:10px 32px 0;font-weight:600;font-size:16px;z-index:20;color:#111}
+.barraest .ico{display:flex;gap:6px;align-items:center;font-size:12px}
+.bat{width:25px;height:12px;border:2px solid currentColor;border-radius:4px;position:relative}
+.bat::after{content:"";position:absolute;inset:1px;right:6px;background:currentColor;border-radius:1px}
+
+/* ---------- software genérico ---------- */
+.lado{position:absolute;left:0;top:0;bottom:0;width:212px;background:var(--marca);color:#dfe5f2;padding:18px 12px}
+.negocio{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;border-bottom:1px solid rgba(255,255,255,.10);margin-bottom:12px}
+.logo-neg{width:34px;height:34px;border-radius:9px;background:var(--acento);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex:none}
+.negocio b{display:block;font-size:14px;color:#fff;line-height:1.15} .negocio small{font-size:11.5px;opacity:.65}
+.nav{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:9px;font-size:14px;margin-bottom:2px;color:#c9d2e6}
+.nav svg{width:18px;height:18px;flex:none;opacity:.85}
+.nav.on{background:rgba(255,255,255,.13);color:#fff;font-weight:600}
+.nav .cnt{margin-left:auto;font-size:11px;background:var(--acento);color:#fff;border-radius:9px;padding:1px 7px;font-weight:700}
+.usuario{position:absolute;left:12px;right:12px;bottom:16px;display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(0,0,0,.14);font-size:13px}
+.usuario .ini{width:30px;height:30px;border-radius:50%;background:#e9edf5;color:var(--marca);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+.usuario small{display:block;opacity:.6;font-size:11px}
+.principal{position:absolute;left:212px;right:0;top:0;bottom:0}
+.arriba{height:58px;background:#fff;border-bottom:1px solid #e6e8ee;display:flex;align-items:center;padding:0 24px;gap:14px}
+.busca{width:360px;height:36px;border-radius:9px;background:#f2f4f7;border:1px solid #e6e8ee;color:#8a93a6;font-size:13.5px;display:flex;align-items:center;gap:8px;padding:0 12px}
+.busca svg{width:16px;height:16px}
+.arriba .der{margin-left:auto;display:flex;align-items:center;gap:16px;color:#5b6477;font-size:13px}
+.campana{position:relative;width:20px;height:20px} .campana svg{width:20px;height:20px}
+.campana i{position:absolute;right:-2px;top:-2px;width:8px;height:8px;border-radius:50%;background:#e5484d;border:2px solid #fff}
+.ava{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;flex:none}
+.cuerpo{position:absolute;left:0;right:0;top:58px;bottom:0;padding:22px 26px}
+.titpag{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.titpag h1{font-size:23px;font-weight:700;color:#141a29;letter-spacing:-.2px}
+.titpag .sub{font-size:13px;color:#7a8296;margin-top:2px}
+.titpag .acc{margin-left:auto;display:flex;gap:10px;align-items:center}
+.btn{height:36px;border-radius:9px;padding:0 14px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:7px;border:1px solid #dfe3ea;background:#fff;color:#2b3346;white-space:nowrap}
+.btn.pri{background:var(--acento);border-color:transparent;color:#fff;box-shadow:0 2px 6px color-mix(in srgb,var(--acento) 35%,transparent)}
+.seg{display:flex;border:1px solid #dfe3ea;border-radius:9px;overflow:hidden;background:#fff;font-size:13px;font-weight:600}
+.seg span{padding:8px 13px;color:#5b6477} .seg span.on{background:#eef1f6;color:#141a29}
+.chip{height:32px;border-radius:16px;padding:0 13px;font-size:13px;border:1px solid #dfe3ea;background:#fff;color:#3b4457;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tarj{background:#fff;border:1px solid #e6e8ee;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.pildora{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.pildora::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.p-nuevo{background:#eaf1ff;color:#2f5fd0} .p-cotizado{background:#fff4e0;color:#b26a00}
+.p-cerrado{background:#e3f8ec;color:#178a4c} .p-perdido{background:#feecec;color:#c53030} .p-gris{background:#eef0f4;color:#687188}
+
+/* cursor y toque */
+#cursor{position:absolute;left:0;top:0;width:26px;height:26px;z-index:60;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+#onda{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;border:3px solid var(--acento);z-index:59;opacity:0;pointer-events:none}
+/* aviso que sube abajo a la derecha */
+.aviso{position:absolute;z-index:55;display:flex;align-items:center;gap:10px;background:#1b2130;color:#fff;border-radius:11px;padding:12px 16px;font-size:14px;
+  box-shadow:0 12px 30px rgba(0,0,0,.28);opacity:0;white-space:nowrap}
+.aviso .pt{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none}
+/* recuadro que resalta (fuera del software, encima) */
+.recuadro{position:absolute;z-index:58;border:3px solid var(--acento);border-radius:10px;pointer-events:none;opacity:0;
+  box-shadow:0 0 0 6px color-mix(in srgb,var(--acento) 22%,transparent),0 0 30px color-mix(in srgb,var(--acento) 45%,transparent)}
+.nota{position:absolute;z-index:58;background:var(--acento);color:#fff;font:700 13px "Segoe UI",system-ui,sans-serif;padding:6px 11px;border-radius:8px;white-space:nowrap;opacity:0;
+  box-shadow:0 6px 16px rgba(0,0,0,.25)}

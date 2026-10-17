@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- VITRINA de los íconos animados: los 15 en cuadrícula, entrando uno tras otro (para catálogos y demos).
+T = {marca, t0: 0.2, paso: 0.12, loop: true} -->
+<link rel="stylesheet" href="../base/base.css">
+<style>
+  #rej{position:absolute;display:grid;gap:22px}
+  .c{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .c div.ic{width:100%;aspect-ratio:1}
+  .c span{font:500 22px var(--mono);color:var(--tenue)}
+  #ti{position:absolute;left:0;right:0;text-align:center;font:700 64px var(--titulos)}
+</style></head><body>
+<div class="firma" id="fi"></div><div id="ti">15 íconos animados</div><div id="rej"></div>
+<script src="../base/base.js"></script><script src="../base/lottie.min.js"></script><script src="iconos.js"></script><script src="en_escena.js"></script>
+<script>
+const NOMBRES = ["telefono","chat","notificacion","reloj","cronometro","calendario","dinero","grafica","estrellas","pin","buscar","megafono","alerta","palomita","apreton"];
+const DEFAULT = {marca:"ejemplo", t0:0.2, paso:0.12, loop:true};
+let armado = false;
+function render(t, T){
+  T = Object.assign({}, DEFAULT, T); marca(T);
+  const V = vertical(), W = innerWidth, H = innerHeight, cols = V ? 4 : 5, cel = V ? 200 : 230;
+  const r = $('rej');
+  if (!armado){ r.innerHTML = NOMBRES.map((n,i) => `<div class="c"><div class="ic" id="ic${i}"></div><span>${n}</span></div>`).join(''); armado = true; }
+  r.style.gridTemplateColumns = `repeat(${cols}, ${cel}px)`;
+  const ancho = cols*cel + (cols-1)*22; r.style.left = (W-ancho)/2 + 'px'; r.style.top = (V ? 270 : 230) + 'px';
+  $('ti').style.top = (V ? 170 : 110) + 'px'; $('ti').style.opacity = prog(t, 0, 0.4);
+  $('fi').textContent =firmaMarca(T);
+  NOMBRES.forEach((n,i) => pintaIcono($('ic'+i), t, {nombre:n, t:T.t0 + T.paso*i, loop:T.loop}, T.marca));
+}
+</script></body></html>

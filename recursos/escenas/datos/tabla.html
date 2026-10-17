@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- TABLA QUE SE LLENA EN VIVO: una hoja de cálculo de pocos renglones que se llena mientras se habla (por ejemplo
+«la prueba de las 10 conversaciones», con horas inventadas).
+Escena completa (no alfa). 16:9 o 9:16. Datos de EJEMPLO siempre inventados.
+T = {
+  marca: id de recursos/marcas/ (por defecto "ejemplo"),
+  etiqueta: "La prueba",  titulo: "Tus últimas 10 conversaciones",  t_titulo
+  columnas: ["#", "Te escribió", "Le contestaste", "Pasó"],   anchos: [0.08, 0.32, 0.32, 0.28] (fracciones)
+  filas: [{c: ["1", "Lun 9:12", "9:20", "8 min"], t, nivel: "bien"|"mal"|"medio"|""}]
+          cada celda entra escalonada desde t; la última se pinta según nivel
+  resumen: {txt, sub, t}   la conclusión, grande, abajo (o encima en vertical)
+} -->
+<link rel="stylesheet" href="../base/base.css">
+<style>
+  #firma{position:absolute}
+  #caja{position:absolute;padding:34px 40px 30px}
+  #et{margin-bottom:10px}
+  #ti{font:700 54px/1.1 var(--titulos);margin-bottom:22px}
+  .fila{display:flex;align-items:center;height:56px;border-bottom:1px solid var(--borde);font:600 28px var(--cuerpo)}
+  .cab{height:48px;font:500 20px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--tenue);border-bottom:2px solid var(--borde)}
+  .cel{padding:0 14px;white-space:nowrap;overflow:hidden}
+  .cel.n{color:var(--tenue);font-family:var(--mono);font-weight:500}
+  .pill{display:inline-block;padding:4px 14px;border-radius:14px;font-weight:700}
+  .pill.bien{background:color-mix(in srgb,var(--bien) 22%,transparent);color:var(--bien)}
+  .pill.mal{background:color-mix(in srgb,var(--mal) 22%,transparent);color:var(--mal)}
+  .pill.medio{background:rgba(255,196,61,.2);color:#ffc43d}
+  #res{position:absolute;font-family:var(--titulos);font-weight:700}
+  #res .r1{font-size:64px;line-height:1.08;white-space:pre-line}
+  #res .r2{font:500 26px var(--mono);letter-spacing:.06em;color:var(--tenue);margin-top:12px;text-transform:uppercase}
+  #cursor{position:absolute;width:3px;height:30px;background:var(--acento)}
+</style></head><body>
+<div id="firma" class="firma"></div>
+<div id="caja" class="vidrio"><div id="et" class="etiqueta"></div><div id="ti"></div><div id="tabla"></div></div>
+<div id="res"><div class="r1"></div><div class="r2"></div></div>
+<script src="../base/base.js"></script>
+<script>
+const DEFAULT = {marca:"aid", etiqueta:"La prueba", titulo:"Tus últimas 10 conversaciones", t_titulo:0.2,
+  columnas:["#", "Te escribió", "Le contestaste", "Pasó"], anchos:[0.08, 0.32, 0.32, 0.28],
+  filas:[{c:["1","Lun 9:12","9:20","8 min"], t:1.0, nivel:"bien"}, {c:["2","Lun 2:00 p.m.","6:00 p.m.","4 h"], t:1.5, nivel:"mal"}],
+  resumen:{txt:"La mitad tardó\nmás de 2 horas.", sub:"sin ningún sistema", t:3.0}};
+function render(t, T){
+  T = Object.assign({}, DEFAULT, T); marca(T);
+  const W = innerWidth, H = innerHeight, V = H > W;
+  $('firma').textContent =firmaMarca(T);
+  // caja: en 16:9 a la izquierda (el resumen a la derecha); en 9:16 arriba (el resumen abajo)
+  const cw = V ? W - 100 : W*0.58, cx = V ? 50 : W*0.06, cy = V ? H*0.13 : H*0.13;
+  const caja = $('caja'); caja.style.width = cw + 'px'; caja.style.left = cx + 'px'; caja.style.top = cy + 'px';
+  const k = prog(t, T.t_titulo - 0.1, 0.45);
+  caja.style.opacity = k; caja.style.transform = `translateY(${30*(1-k)}px) scale(${0.97 + 0.03*k})`;
+  $('et').textContent = T.etiqueta || ''; $('ti').textContent = T.titulo || '';
+  const anch = T.anchos, iw = cw - 80;
+  const fila = (cells, cls, fn) => `<div class="fila ${cls}">` + cells.map((c, i) => `<div class="cel ${i===0?'n':''}" style="width:${anch[i]*iw}px">${fn ? fn(c, i) : c}</div>`).join('') + '</div>';
+  let html = fila(T.columnas, 'cab');
+  T.filas.forEach((f) => {
+    const a = prog(t, f.t - 0.1, 0.3);
+    html += fila(f.c, '', (c, i) => {
+      const ti = f.t + 0.14 * i, e = prog(t, ti - 0.1, 0.25);
+      if (e <= 0) return '';
+      const st = `opacity:${e};display:inline-block;transform:translateY(${10*(1-e)}px)`;
+      if (i === f.c.length - 1 && f.nivel) return `<span class="pill ${f.nivel}" style="${st};transform:scale(${0.6 + 0.4*resorte(t, ti - 0.1, 0.4)})">${c}</span>`;
+      return `<span style="${st}">${c}</span>`;
+    }).replace('class="fila "', `class="fila " style="opacity:${0.25 + 0.75*a}"`);
+  });
+  $('tabla').innerHTML = html;
+  const r = T.resumen, re = $('res');
+  if (r){
+    const e = prog(t, r.t - 0.1, 0.35), g = resorte(t, r.t - 0.1, 0.5);
+    re.querySelector('.r1').textContent = r.txt; re.querySelector('.r2').textContent = r.sub || '';
+    re.style.opacity = e; re.style.transform = `scale(${1.25 - 0.25*Math.min(1, g)})`; re.style.transformOrigin = 'left center';
+    re.querySelector('.r1').style.color = 'var(--acento)';
+    if (V){ re.style.left = '60px'; re.style.right = '60px'; re.style.top = (cy + caja.offsetHeight + 60) + 'px'; re.style.width = ''; }
+    else { re.style.left = (cx + cw + W*0.04) + 'px'; re.style.width = (W - cx - cw - W*0.08) + 'px'; re.style.top = (H*0.42) + 'px'; }
+  } else re.style.opacity = 0;
+}
+</script></body></html>

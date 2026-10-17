@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- ESCENA: agenda de citas de una semana (14-oct-2026). Software genérico (sin logos ni nombres de terceros), en una
+laptop en 16:9 o una tablet en 9:16. Las citas caen en su horario con color por estado; una se marca «No llegó» y otra
+«Confirmada ✓» (con cursor y menú, o toque en tablet); arriba el contador «Citas esta semana · Llegaron · No llegaron».
+Cuenta «agendan y no llegan» (escena por omisión) o «confirmar reduce las faltas» (--escena confirmar).
+
+render(t, T, escena) pinta el segundo t. Campos de T (todos opcionales; se mezclan con DEFAULT):
+  marca       id de recursos/marcas/ (por defecto "ejemplo")                 firma   false = sin firma
+  negocio     nombre del negocio ficticio   sucursal, usuario  textos de la barra lateral
+  dias        ["Lun",…,"Sáb"]  (sin número: nunca «martes 14»)
+  horas       [9, 18]   primera y última hora de la rejilla
+  hoy         índice del día de hoy en `dias` (columna resaltada; los anteriores se ven pasados)
+  ahora       hora decimal de la línea roja de «ahora» (15.8 = 15:48); null = sin línea
+  citas       [{d: día, h: hora decimal, dur: horas, n: nombre, s: servicio, e: estado inicial}]
+              estados: "pendiente" (Sin confirmar, ámbar) · "confirmada" (verde ✓) · "llego" (gris, Llegó)
+                       "no_llego" (rojo, tachada) · "agendada" (azul)
+  caen        [inicio, fin]  segundos en que van cayendo las citas, escalonadas en orden
+  eventos     [{i: índice de cita, t: segundo, e: estado nuevo, menu: true}]  menu=true → cursor/toque + menú + aviso
+  cuenta      segundo en que los números del contador empiezan a subir
+  indicadores ["citas","llegaron","faltas"]  o  ["citas","confirmadas","sinConfirmar"]; se calculan de los estados
+  contador    {citas: 18, llegaron: 14, ...}  opcional: fija un número en vez de calcularlo
+  camara      [{t, cita: i | foco: "contador" | "todo", z: acercamiento}]  si falta, se arma sola desde los eventos
+Ejemplo: --T '{"eventos":[{"i":16,"t":2.4,"e":"no_llego","menu":true}],"camara":[{"t":1.6,"cita":16,"z":2},{"t":4,"foco":"todo"}]}'
+-->
+<link rel="stylesheet" href="../base/base.css"><link rel="stylesheet" href="negocio.css">
+<style>
+  #contador{display:flex;align-items:center;gap:30px;padding:0 22px;height:64px;margin-bottom:12px}
+  .ind{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
+  .ind .et{font-size:13.5px;color:#5b6477;font-weight:600}
+  .ind .num{font-size:28px;font-weight:700;color:#141a29;letter-spacing:-.5px}
+  .ind.verde .num{color:#178a4c} .ind.rojo .num{color:#d23b3b} .ind.ambar .num{color:#b26a00}
+  .sep{width:1px;height:30px;background:#e6e8ee}
+  .barra-pct{flex:1;min-width:120px} .barra-pct .pista{height:8px;border-radius:4px;background:#feecec;overflow:hidden}
+  .barra-pct .llena{height:100%;background:#2fb36a;border-radius:4px}
+  .barra-pct small{display:block;font-size:12px;color:#7a8296;margin-top:5px;text-align:right}
+  .leyenda{display:flex;gap:14px;font-size:12px;color:#5b6477;white-space:nowrap}
+  .leyenda i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  #cal{position:relative;overflow:hidden}
+  .cab{position:absolute;top:0;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5b6477;border-bottom:1px solid #e6e8ee}
+  .cab.hoy{color:var(--acento)} .cab.hoy b{background:var(--acento);color:#fff;border-radius:11px;padding:1px 9px;font-size:11px;margin-top:3px}
+  .cab small{font-weight:500;font-size:11px;color:#9aa1b2;margin-top:2px}
+  .hora{position:absolute;left:0;font-size:11.5px;color:#9aa1b2;text-align:right;padding-right:8px;transform:translateY(-7px)}
+  .lin{position:absolute;right:0;height:1px;background:#eef0f4}
+  .colv{position:absolute;width:1px;background:#eef0f4}
+  .pasado{position:absolute;background:repeating-linear-gradient(135deg,#fafbfc 0 8px,#f4f5f8 8px 16px)}
+  .colhoy{position:absolute;background:color-mix(in srgb,var(--acento) 5%,transparent)}
+  .ahora{position:absolute;height:2px;background:#e5484d;z-index:6} .ahora::before{content:"";position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:#e5484d}
+  .cita{position:absolute;border-radius:7px;padding:5px 8px 4px 9px;overflow:hidden;border-left:4px solid;z-index:5;line-height:1.2;
+        box-shadow:0 1px 2px rgba(16,24,40,.08)}
+  .cita .n{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;display:inline-block;max-width:100%}
+  .cita .n .tacha{position:absolute;left:0;top:52%;height:2px;background:#d23b3b}
+  .cita .s{opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cita .tag{display:inline-flex;align-items:center;gap:4px;margin-top:3px;border-radius:9px;padding:1px 7px;font-weight:700;white-space:nowrap}
+  .cita .mini{position:absolute;right:6px;top:6px;width:17px;height:17px;border-radius:50%;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;color:#fff}
+  .e-pendiente{background:#fff6e5;border-color:#f0a020;color:#7a4b00} .e-pendiente .tag{background:#ffe9bf;color:#8a5600}
+  .e-confirmada{background:#e3f7eb;border-color:#1f9d55;color:#10552f} .e-confirmada .tag{background:#1f9d55;color:#fff}
+  .e-llego{background:#eef1f6;border-color:#8a94a8;color:#3b4457} .e-llego .tag{background:#dfe4ec;color:#4b5568}
+  .e-no_llego{background:#fdeeee;border-color:#e5484d;color:#8b2323} .e-no_llego .tag{background:#e5484d;color:#fff}
+  .e-agendada{background:#e9efff;border-color:#4c6fd6;color:#1f3a8a} .e-agendada .tag{background:#d5e0ff;color:#2a4aa8}
+  .menu{position:absolute;z-index:57;width:178px;background:#fff;border:1px solid #e1e4ea;border-radius:10px;padding:6px;box-shadow:0 14px 34px rgba(16,24,40,.22);opacity:0;font-size:13.5px}
+  .menu .mt{font-size:11px;color:#9aa1b2;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 8px 6px}
+  .menu .op{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:#2b3346}
+  .menu .op i{width:9px;height:9px;border-radius:50%;flex:none}
+  .menu .op.sel{background:#f1f3f7}
+  /* tablet (vertical) */
+  .tablet-app .arribat{position:absolute;left:0;right:0;top:44px;height:70px;display:flex;align-items:center;padding:0 22px;gap:12px}
+  .tablet-app h1{font-size:28px;font-weight:700;color:#141a29}
+  .tablet-app .neg{font-size:13px;color:#7a8296;margin-top:1px}
+  .redondo{width:42px;height:42px;border-radius:50%;background:var(--acento);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px color-mix(in srgb,var(--acento) 40%,transparent)}
+</style></head><body>
+<div class="firma" id="firma"></div>
+<div id="escena"></div>
+<script src="../base/base.js"></script><script src="dispositivo.js"></script>
+<script>
+const DEFAULT = {
+  marca:"ejemplo", negocio:"Taller Mecánico Hernández", sucursal:"Sucursal Centro", usuario:"Recepción",
+  dias:["Lun","Mar","Mié","Jue","Vie","Sáb"], horas:[9,18], hoy:5, ahora:15.8,
+  citas:[
+    {d:0,h:9,dur:1.5,n:"Luis Ramírez",s:"Afinación",e:"llego"},
+    {d:0,h:11,dur:1,n:"Ana Torres",s:"Cambio de aceite",e:"llego"},
+    {d:0,h:15,dur:1.5,n:"Jorge Medina",s:"Frenos",e:"no_llego"},
+    {d:1,h:10,dur:1,n:"María López",s:"Diagnóstico",e:"llego"},
+    {d:1,h:12,dur:1,n:"Ricardo Salinas",s:"Alineación",e:"llego"},
+    {d:1,h:16,dur:1,n:"Fernanda Ruiz",s:"Revisión de clima",e:"llego"},
+    {d:2,h:9,dur:2,n:"Carlos Gutiérrez",s:"Suspensión",e:"llego"},
+    {d:2,h:13,dur:1,n:"Patricia Flores",s:"Cambio de aceite",e:"no_llego"},
+    {d:2,h:15.5,dur:1.5,n:"Héctor Vázquez",s:"Frenos",e:"llego"},
+    {d:3,h:10,dur:1.5,n:"Sofía Castillo",s:"Afinación",e:"llego"},
+    {d:3,h:14,dur:1,n:"Miguel Rojas",s:"Batería",e:"llego"},
+    {d:4,h:9.5,dur:1,n:"Daniela Moreno",s:"Diagnóstico",e:"llego"},
+    {d:4,h:11,dur:1,n:"Roberto Silva",s:"Alineación",e:"llego"},
+    {d:4,h:16,dur:1,n:"Alejandra Núñez",s:"Cambio de aceite",e:"llego"},
+    {d:5,h:9,dur:1.5,n:"Arturo Ortiz",s:"Frenos",e:"llego"},
+    {d:5,h:11,dur:1,n:"Guadalupe Reyes",s:"Afinación",e:"llego"},
+    {d:5,h:13,dur:1.5,n:"Eduardo Pérez",s:"Diagnóstico",e:"pendiente"},
+    {d:5,h:16.5,dur:1.5,n:"Verónica Cruz",s:"Revisión de clima",e:"pendiente"},
+  ],
+  caen:[0.4, 2.0], cuenta:0.6,
+  eventos:[{i:16,t:3.1,e:"no_llego",menu:true},{i:17,t:4.5,e:"confirmada",menu:true}],
+  indicadores:["citas","llegaron","faltas"], contador:null, camara:null,
+};
+// «confirmar reduce las faltas»: lunes temprano, todas sin confirmar, y se van confirmando en ola
+const PRESETS = {
+  confirmar: T => {
+    const citas = T.citas.map(c => Object.assign({}, c, {e:"pendiente"}));
+    const orden = citas.map((c,i)=>i).sort((a,b)=>citas[a].d-citas[b].d || citas[a].h-citas[b].h);
+    const sin = new Set([orden[4], orden[11], orden[15]]);            // 3 que nunca contestan
+    const ev = orden.filter(i=>!sin.has(i)).map((i,k)=>({i, t:2.0+k*0.14, e:"confirmada"}));
+    return {hoy:0, ahora:8.6, citas, eventos:ev, indicadores:["citas","confirmadas","sinConfirmar"],
+            camara:[{t:1.4,cita:orden[1],z:1.6},{t:3.0,cita:orden[9],z:1.6},{t:4.5,foco:"contador",z:1.5}]};
+  },
+};
+const SENAL = '<svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="1" fill="currentColor"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>';
+const ETQ = {pendiente:"Sin confirmar", confirmada:"Confirmada ✓", llego:"Llegó", no_llego:"No llegó", agendada:"Agendada"};
+const hm = h => { const H=Math.floor(h), m=Math.round((h-H)*60); return H+":"+String(m).padStart(2,"0"); };
+let CLAVE = "", G = null, TT = null;
+
+function estadoEn(T, i, t){ let e = T.citas[i].e, t0 = -1; for (const ev of T.eventos) if (ev.i===i && t>=ev.t){ e = ev.e; t0 = ev.t; } return {e, t0}; }
+
+function construye(T){
+  const v = vertical(), app = montaDispositivo(v ? "tablet" : "laptop");
+  app.className = v ? "tablet-app" : "";
+  const nd = T.dias.length, nh = T.horas[1]-T.horas[0];
+  let html = "", calW, calH;
+  if (!v){
+    html += ladoNeg(T, "Agenda", [["inicio","Inicio"],["agenda","Agenda"],["clientes","Clientes"],["mensajes","Mensajes","3"],["cotiz","Cotizaciones"],["grafica","Reportes"],["ajustes","Ajustes"]]);
+    html += `<div class="principal">${arribaNeg("Buscar cliente, placa o teléfono…")}<div class="cuerpo">
+      <div class="titpag"><div><h1>Agenda</h1><div class="sub">Esta semana · ${T.sucursal}</div></div>
+        <div class="acc"><div class="seg"><span>Día</span><span class="on">Semana</span><span>Mes</span></div>
+        <div class="btn">‹&nbsp; Esta semana &nbsp;›</div><div class="btn pri">${ICONO("mas",15)} Nueva cita</div></div></div>
+      ${contadorHTML(T, false)}
+      <div id="cal" class="tarj" style="height:564px"></div></div></div>`;
+    calW = 1016; calH = 564; G = {x0:58, top:44, fs:12.5, vis:T.dias.map((d,k)=>k)};
+  } else {
+    html += `<div class="barraest"><span id="hb">${hm(T.ahora||9)}</span><span class="ico">${SENAL}<span class="bat"></span></span></div>
+      <div class="arribat"><div><h1>Agenda</h1><div class="neg">${T.negocio} · Esta semana</div></div>
+      <div style="margin-left:auto" class="seg"><span>Día</span><span class="on">3 días</span><span>Semana</span></div><div class="redondo">${ICONO("mas",20)}</div></div>
+      <div style="position:absolute;left:16px;right:16px;top:124px">${contadorHTML(T, true)}</div>
+      <div id="cal" class="tarj" style="position:absolute;left:16px;right:16px;top:250px;bottom:16px"></div>`;
+    calW = 728; calH = 1060-250-16; const ini = Math.max(0, Math.min(T.hoy-2, nd-3)); G = {x0:50, top:46, fs:16, vis:[ini,ini+1,ini+2].filter(k=>k<nd)};
+  }
+  app.innerHTML = html;
+  G.colW = (calW - G.x0 - 2)/G.vis.length; G.col = d => G.vis.indexOf(d); G.rowH = (calH - G.top - 6)/nh;
+  // rejilla
+  let c = "";
+  T.dias.forEach((d,k)=>{
+    if (G.col(k) < 0) return;
+    const x = G.x0 + G.col(k)*G.colW;
+    if (k < T.hoy) c += `<div class="pasado" style="left:${x}px;top:${G.top}px;width:${G.colW}px;bottom:0"></div>`;
+    if (k === T.hoy) c += `<div class="colhoy" style="left:${x}px;top:0;width:${G.colW}px;bottom:0"></div>`;
+    c += `<div class="cab ${k===T.hoy?'hoy':''}" style="left:${x}px;width:${G.colW}px">${d}${k===T.hoy?'<b>Hoy</b>':''}</div>`;
+    c += `<div class="colv" style="left:${x}px;top:0;bottom:0"></div>`;
+  });
+  c += `<div class="cab" style="left:0;width:${G.x0}px"></div>`;
+  for (let h=0; h<=nh; h++){ const y = G.top + h*G.rowH;
+    c += `<div class="lin" style="left:${G.x0}px;top:${y}px"></div>`;
+    if (h<nh) c += `<div class="hora" style="top:${y}px;width:${G.x0}px">${T.horas[0]+h}:00</div>`; }
+  if (T.ahora!=null && T.ahora>=T.horas[0] && T.ahora<=T.horas[1]){
+    const y = G.top + (T.ahora-T.horas[0])*G.rowH, x = G.x0 + Math.max(0,G.col(T.hoy))*G.colW;
+    c += `<div class="ahora" style="left:${x}px;width:${G.colW}px;top:${y}px"></div>`;
+  }
+  T.citas.forEach((ci,i)=>{
+    if (G.col(ci.d) < 0) return;                       // en la vista de 3 días, las de otros días no se pintan
+    const x = G.x0 + G.col(ci.d)*G.colW + 4, y = G.top + (ci.h-T.horas[0])*G.rowH + 2, w = G.colW - 8, h = ci.dur*G.rowH - 4;
+    c += `<div class="cita" id="c${i}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;font-size:${G.fs}px">
+      <span class="n">${ci.n}<span class="tacha"></span></span><div class="s">${hm(ci.h)} · ${ci.s}</div><div class="tag"></div><span class="mini"></span></div>`;
+  });
+  $("cal").innerHTML = c;
+  // menú de cada evento con menú, junto a su cita
+  T.eventos.forEach((ev,k)=>{
+    if (!ev.menu || !$("c"+ev.i)) return;
+    const b = posApp($("c"+ev.i)), mw = 178;
+    const izq = b.x + b.w + 8 + mw > DISP.app.w - 10;
+    const mx = izq ? b.x - mw - 8 : b.x + b.w + 8, my = Math.min(b.y, DISP.app.h - 190);
+    const ops = [["llego","Llegó","#8a94a8"],["no_llego","No llegó","#e5484d"],["confirmada","Confirmar cita","#1f9d55"],["agendada","Reagendar","#4c6fd6"]];
+    app.insertAdjacentHTML("beforeend", `<div class="menu" id="m${k}" style="left:${mx}px;top:${my}px"><div class="mt">Marcar cita</div>
+      ${ops.map(([e,txt,col])=>`<div class="op" id="m${k}-${e}"><i style="background:${col}"></i>${txt}</div>`).join("")}</div>`);
+  });
+  app.insertAdjacentHTML("beforeend", `<div class="aviso" id="aviso"><span class="pt" id="avpt"></span><span id="avtx"></span></div>`);
+}
+
+function contadorHTML(T, v){
+  const N = {citas:["Citas esta semana",""],llegaron:["Llegaron","verde"],faltas:["No llegaron","rojo"],
+             confirmadas:["Confirmadas","verde"],sinConfirmar:["Sin confirmar","ambar"]};
+  const leyenda = `<div class="leyenda"><span><i style="background:#f0a020"></i>Sin confirmar</span><span><i style="background:#1f9d55"></i>Confirmada</span><span><i style="background:#8a94a8"></i>Llegó</span><span><i style="background:#e5484d"></i>No llegó</span></div>`;
+  const inds = T.indicadores.map((k,j)=>`${j?'<div class="sep"></div>':''}<div class="ind ${N[k][1]}"><span class="et">${N[k][0]}</span><span class="num" id="n-${k}">0</span></div>`).join("");
+  if (!v) return `<div id="contador" class="tarj">${inds}<div class="barra-pct"><div class="pista"><div class="llena" id="pct"></div></div><small id="pcttx"></small></div>${leyenda}</div>`;
+  return `<div id="contador" class="tarj" style="flex-wrap:wrap;height:auto;padding:14px 18px;gap:12px 22px">${inds}
+    <div class="barra-pct" style="flex-basis:100%"><div class="pista"><div class="llena" id="pct"></div></div><small id="pcttx"></small></div></div>`;
+}
+
+function render(t, T, escena){
+  const Tu = T || {};
+  T = Object.assign({}, DEFAULT, Tu);
+  if (escena && PRESETS[escena]) T = Object.assign({}, T, PRESETS[escena](T), Tu);   // lo que mandes en T le gana al preset
+  marca(T); firmaNeg(T);
+  const clave = JSON.stringify(T) + escena + vertical();
+  if (clave !== CLAVE){ CLAVE = clave; construye(T); }
+  const n = T.citas.length;
+  // las citas caen escalonadas, en orden de día y hora
+  // (en la vista de 3 días solo caen las que se ven, y el contador sube en proporción)
+  const orden = T.citas.map((c,i)=>i).filter(i=>$("c"+i)).sort((a,b)=>T.citas[a].d-T.citas[b].d || T.citas[a].h-T.citas[b].h);
+  const paso = (T.caen[1]-T.caen[0]) / Math.max(1, orden.length-1);
+  let visibles = 0;
+  orden.forEach((i,k)=>{
+    const t0 = T.caen[0] + k*paso, el = $("c"+i), ci = T.citas[i];
+    if (!el) return;
+    const a = prog(t, t0, 0.35), r = resorte(t, t0, 0.45); if (t >= t0) visibles++;
+    const {e, t0:te} = estadoEn(T, i, t);
+    el.className = "cita e-" + e;
+    const golpe = te>=0 ? 1 + 0.07*Math.sin(lim((t-te)/0.35)*Math.PI) : 1;
+    el.style.opacity = a * (e==="no_llego" ? 0.78 : 1);
+    el.style.transform = `translateY(${-26*(1-a)}px) scale(${(0.92+0.08*r)*golpe})`;
+    el.style.zIndex = te>=0 && t-te<1 ? 7 : 5;
+    el.querySelector(".tacha").style.width = e==="no_llego" ? (te>=0 ? 100*prog(t,te+0.05,0.35) : 100) + "%" : "0";
+    const tag = el.querySelector(".tag");
+    const alto = ci.dur*G.rowH - 4;
+    const cabe = alto >= (vertical()? 74 : 64);
+    tag.style.display = cabe ? "inline-flex" : "none";
+    const mini = el.querySelector(".mini"), mc = {llego:["✓","#8a94a8"], confirmada:["✓","#1f9d55"], no_llego:["✕","#e5484d"]}[e];
+    mini.style.display = (!cabe && mc) ? "flex" : "none";
+    if (mc){ mini.textContent = mc[0]; mini.style.background = mc[1]; }
+    el.querySelector(".n").style.maxWidth = (!cabe && mc) ? "calc(100% - 20px)" : "100%";
+    tag.textContent = ETQ[e];
+    tag.style.transform = te>=0 ? `scale(${0.6+0.4*resorte(t,te,0.4)})` : "none";
+  });
+  // contador: se calcula de los estados (o se fija en T.contador) y sube desde «cuenta»
+  const cuenta = {citas:0, llegaron:0, faltas:0, confirmadas:0, sinConfirmar:0};
+  T.citas.forEach((c,i)=>{ const {e} = estadoEn(T,i,t); cuenta.citas++;
+    if (e==="llego") cuenta.llegaron++; if (e==="no_llego") cuenta.faltas++;
+    if (e==="confirmada"||e==="llego") cuenta.confirmadas++; if (e==="pendiente") cuenta.sinConfirmar++; });
+  const fijo = T.contador || {}, kc = prog(t, T.cuenta, 1.3);
+  T.indicadores.forEach(k=>{
+    let v = fijo[k]!=null ? fijo[k] : cuenta[k];
+    if (k==="citas" && fijo[k]==null) v = Math.round(n * visibles / Math.max(1, orden.length)); else v = Math.round(v*kc);
+    $("n-"+k).textContent = v;
+  });
+  const total = fijo.citas!=null ? fijo.citas : n;
+  const bueno = T.indicadores[1], vb = fijo[bueno]!=null ? fijo[bueno] : cuenta[bueno];
+  const pct = total ? vb/total : 0;
+  $("pct").style.width = (100*pct*kc) + "%";
+  $("pcttx").textContent = Math.round(100*pct*kc) + "% " + (bueno==="llegaron" ? "de asistencia" : "confirmadas");
+  // menús, cursor/toque y aviso de cada evento con menú
+  const puntos = [];
+  let avisoK = 0, avisoTx = "", avisoE = "";
+  const conMenu = T.eventos.filter(e=>e.menu);
+  T.eventos.forEach((ev,k)=>{
+    if (!ev.menu || !$("m"+k)) return;
+    const sig = conMenu.find(e=>e.t>ev.t), fin = Math.min(ev.t+1.7, sig ? sig.t-0.75 : 99);
+    const m = $("m"+k), ab = prog(t, ev.t-0.55, 0.18), ci = 1 - prog(t, ev.t+0.12, 0.15);
+    m.style.opacity = ab*ci; m.style.transform = `translateY(${-6*(1-ab)}px) scale(${0.96+0.04*ab})`;
+    m.querySelectorAll(".op").forEach(o=>o.classList.toggle("sel", o.id===`m${k}-${ev.e}` && t>=ev.t-0.3));
+    puntos.push({t:ev.t-0.6, el:"c"+ev.i, clic:true}, {t:ev.t, el:`m${k}-${ev.e}`, clic:true, ox:40});
+    if (t >= ev.t){ avisoK = prog(t,ev.t+0.1,0.3)*(1-prog(t,fin,0.25)); avisoTx = `${T.citas[ev.i].n}: ${ETQ[ev.e].replace(" ✓","")}`; avisoE = ev.e; }
+  });
+  cursorNeg(t, puntos);
+  const av = $("aviso");
+  av.style.opacity = avisoK; $("avtx").textContent = avisoTx ? "Cita actualizada · " + avisoTx : "";
+  const colE = {no_llego:"#e5484d", confirmada:"#1f9d55", llego:"#8a94a8", agendada:"#4c6fd6", pendiente:"#f0a020"}[avisoE] || "#888";
+  $("avpt").style.background = colE; $("avpt").textContent = avisoE==="no_llego" ? "✕" : "✓";
+  av.style.left = (vertical() ? 24 : 236) + "px"; av.style.bottom = (24 - 14*(1-avisoK)) + "px";   // abajo a la izquierda: no tapa la cita siguiente
+  // cámara
+  let cam = T.camara;
+  if (!cam){
+    const evs = T.eventos.filter(e=>e.menu);
+    cam = evs.map(e=>({t:e.t-1.0, cita:e.i, z:vertical()?1.55:2.0}));
+    const ult = evs.length ? evs[evs.length-1].t : 3;
+    cam.push({t:ult+0.8, foco:"contador", z:vertical()?1.35:1.55});
+  }
+  camaraNeg(t, cam.map(k=>({t:k.t, d:k.d, z:k.z, foco: k.cita!=null ? ($("c"+k.cita) ? "c"+k.cita : "contador") : (k.foco==="todo" ? null : k.foco)})));
+}
+</script></body></html>

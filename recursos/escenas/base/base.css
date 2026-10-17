@@ -1,0 +1,24 @@
+/* Base común del banco de escenas (14-oct-2026). Cada escena enlaza este archivo: ../base/base.css
+   La marca NO esta aqui: base.js aplica los colores y letras de recursos/marcas/<id>.json (T.marca).
+   Estos valores son solo los de reserva si una escena se abre sin capturar.py. */
+@font-face{font-family:"Poppins";font-weight:700;src:url("../../fuentes/Poppins-Bold.ttf")}
+@font-face{font-family:"Poppins";font-weight:600;src:url("../../fuentes/Poppins-SemiBold.ttf")}
+@font-face{font-family:"Poppins";font-weight:500;src:url("../../fuentes/Poppins-Medium.ttf")}
+@font-face{font-family:"Roboto Mono";src:url("../../fuentes/RobotoMono.ttf")}
+:root{--fondo1:#1f3b44;--fondo2:#12252b;--fondo3:#0a1518;--marca:#1f3b44;--acento:#F2B33D;--acento2:#f7d58c;
+  --texto:#eef3f2;--tenue:#9fb3b0;--tarjeta:rgba(31,59,68,.78);--borde:rgba(255,255,255,.10);
+  --titulos:"Poppins",sans-serif;--cuerpo:"Poppins",sans-serif;--mono:"Roboto Mono",monospace;--bien:#2fd27a;--mal:#ff5d5d}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100vw;height:100vh;overflow:hidden;font-family:var(--cuerpo);color:var(--texto)}
+/* fondo de escena completa (no se usa en las de transparencia: body.alfa) */
+body:not(.alfa){background:radial-gradient(ellipse 65% 75% at 50% 42%,var(--fondo1) 0%,var(--fondo2) 55%,var(--fondo3) 100%)}
+body:not(.alfa)::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;   /* detrás del contenido: si no, tiñe la interfaz (lo cazó el frente web) */
+  background:radial-gradient(circle at 25% 15%,color-mix(in srgb,var(--acento) 12%,transparent),transparent 42%)}
+body.alfa{background:transparent}
+.firma{position:absolute;left:4.2vw;top:5.5vh;font:500 max(22px,1.3vw) var(--mono);color:var(--tenue);letter-spacing:.06em;z-index:50}
+/* vidrio: tarjetas con profundidad */
+.vidrio{background:var(--tarjeta);border:1px solid var(--borde);backdrop-filter:blur(22px);border-radius:28px;
+  box-shadow:0 40px 90px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.08)}
+.etiqueta{font:500 22px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--acento)}
+.titulo{font-family:var(--titulos);font-weight:700}
+.vertical .solo-h{display:none} .horizontal .solo-v{display:none}

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- Escenas de pantalla VERTICALES para los reels (14-oct-2026). Mismo teléfono que el gancho del largo (telefono.css).
+render(t, T, escena) pinta el segundo t de la escena "chats2" (reel 3) o "llamada" (reel 4). Lo llama render_v.py. -->
+<link rel="stylesheet" href="telefono.css">
+<style>
+  html,body{width:1080px;height:1920px}
+  #escena{left:325px;top:300px;margin:0}
+  #firma{left:70px;top:90px;font-size:26px}
+  /* llamada entrante */
+  #llamada{position:absolute;inset:0;z-index:12;color:#fff;background:linear-gradient(170deg,#3a4566 0%,#1d2338 55%,#2b1f2a 100%)}
+  #llamada .quien{position:absolute;top:150px;width:100%;text-align:center}
+  #llamada .tipo{font-size:17px;opacity:.75}
+  #llamada .nom{font-size:40px;font-weight:600;margin-top:6px}
+  #llamada .av{position:absolute;top:300px;left:50%;width:150px;height:150px;margin-left:-75px;border-radius:50%;background:#5a6588;
+               display:flex;align-items:center;justify-content:center;font-size:70px}
+  #llamada .aro{position:absolute;top:375px;left:50%;border-radius:50%;border:3px solid rgba(255,255,255,.35)}
+  #llamada .mini{position:absolute;top:610px;width:100%;display:flex;justify-content:space-around;padding:0 60px;font-size:14px;opacity:.85;text-align:center}
+  #llamada .mini div span{display:block;width:56px;height:56px;margin:0 auto 6px;border-radius:50%;background:rgba(255,255,255,.18)}
+  .boton{position:absolute;top:720px;width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .boton svg{width:36px;height:36px}
+  #rechazar{left:66px;background:#ff3b30} #aceptar{right:66px;background:#34c759}
+  #llamada .etq{position:absolute;top:806px;font-size:15px;opacity:.85;width:110px;text-align:center}
+  /* notificaciones apiladas en la pantalla bloqueada */
+  .nb{position:absolute;left:12px;right:12px;height:88px;border-radius:22px;z-index:13;background:rgba(240,240,245,.86);
+      backdrop-filter:blur(18px);box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px;padding:0 16px;color:#111}
+  .nb .ap{width:42px;height:42px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center}
+  .nb .n1{font-size:15px;font-weight:700} .nb .n2{font-size:15px;color:#333;margin-top:2px}
+  .nb .ahora{position:absolute;right:16px;top:14px;font-size:12px;color:#8a8a8e}
+</style></head><body>
+<div id="fondo"></div><div id="luz"></div>
+<div id="firma"></div>
+<div id="escena"><div id="tel"><div id="pantalla">
+  <div id="isla"></div>
+  <div id="bloqueo"><div class="barra" style="color:#fff"><span></span><span class="ico">▂▄▆ <span class="bat"></span></span></div>
+    <div class="fecha" id="fb">martes, 20 de octubre</div><div class="hora" id="hb">9:00</div><div id="pila"></div></div>
+  <div id="chats">
+    <div class="barra" style="color:#111"><span id="hc">9:00</span><span class="ico">▂▄▆ <span class="bat"></span></span></div>
+    <div class="tit">Chats</div><div class="busca">Buscar</div>
+    <div class="filtros"><span class="on">Todos</span><span>No leídos</span><span>Favoritos</span><span>Grupos</span></div>
+    <div id="filas"></div>
+  </div>
+  <div id="llamada"><div class="barra" style="color:#fff"><span id="hl">11:48</span><span class="ico">▂▄▆ <span class="bat"></span></span></div>
+    <div class="quien"><div class="tipo">llamada de voz…</div><div class="nom">Cliente nuevo</div></div>
+    <div class="aro" id="aro1"></div><div class="aro" id="aro2"></div><div class="av">👤</div>
+    <div class="mini"><div><span></span>Recordar</div><div><span></span>Mensaje</div></div>
+    <div class="boton" id="rechazar"><svg viewBox="0 0 24 24"><path fill="#fff" d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1 0-1.36C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.72c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85a.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></div>
+    <div class="boton" id="aceptar"><svg viewBox="0 0 24 24"><path fill="#fff" d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></div>
+    <div class="etq" style="left:49px">Rechazar</div><div class="etq" style="right:49px">Aceptar</div>
+  </div>
+  <div id="noti"><div class="ap"><svg width="26" height="26" viewBox="0 0 24 24"><path fill="#fff" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2z"/></svg></div>
+    <div><div class="n1" id="n1"></div><div class="n2" id="n2"></div></div><div class="ahora">ahora</div></div>
+</div><div id="brillo"></div></div></div>
+<script>
+const ease = x => x<=0?0:x>=1?1:1-Math.pow(1-x,3);
+const prog = (t,a,d) => ease((t-a)/d);
+const $ = id => document.getElementById(id);
+const TK = c => `<span class="tk"><svg viewBox="0 0 18 12"><path d="M1 6.5l3 3 6-7" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M7 9.5l1 0.2 6-7" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></span>`;
+const BURBUJA = '<svg width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2z"/></svg>';
+const TELEF = '<svg width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>';
+function camara(s, px, py, gy, gx, golpe){
+  const e = $('escena'); e.style.transformOrigin = `${px}px ${py}px`;
+  e.style.transform = `translate(${540-(325+px)}px, ${760-(300+py)}px) scale(${s})`;
+  $('tel').style.transform = `rotateY(${gy}deg) rotateX(${gx}deg) rotateZ(${golpe}deg)`;
+}
+function golpeEn(t, a){ return (t>a-0.05 && t<a+0.25) ? Math.sin((t-a)*60)*0.8*(1-(t-a+0.05)/0.3) : 0; }
+function noti(t, a, quien, txt, hasta){
+  const n = prog(t,a-0.1,0.35) - (hasta ? prog(t,hasta-0.25,0.25) : 0);
+  $('noti').style.top = (-140 + 190*n) + "px"; $('n1').textContent = quien; $('n2').textContent = txt;
+}
+
+function chats2(t, T){            // reel 3: dos consultorios, uno contesta 9:10 y el otro 9:40
+  $('llamada').style.display = 'none';
+  const k1 = prog(t,T.esc-0.25,0.7), k2 = prog(t,T.uno-0.1,0.5);
+  camara(1.48 + 0.04*ease(t/2) + 0.12*k1 + 0.08*k2, 215, 230 + 90*k1 - 60*k2, -9 + 7*ease(t/6.5), 4 - 3*ease(t/6.5), golpeEn(t,T.uno) + golpeEn(t,T.otro));
+  const des = prog(t,T.esc-0.25,0.45); $('bloqueo').style.transform = `translateY(${-100*des}%)`;
+  const hora = t>=T.otro-0.05 ? "9:40" : t>=T.uno-0.05 ? "9:10" : "9:00"; $('hb').textContent = hora; $('hc').textContent = hora;
+  const F = [{nom:"Consultorio Dental Centro", av:"#d9fdd3", e:"🦷", r:T.uno, h:"9:10 p.m.", txt:"Sí, claro. Te esperamos a las 9:30."},
+             {nom:"Clínica Dental Norte", av:"#e7f0ff", e:"🦷", r:T.otro, h:"9:40 p.m.", txt:"Hola, sí tenemos espacio."},
+             {nom:"Mamá", av:"#f3e8ff", e:"👩", fijo:"Ya llegaste?", h:"8:12 p.m."},
+             {nom:"Trabajo", av:"#eef0f1", e:"💼", fijo:"Mañana a las 9", h:"6:40 p.m."},
+             {nom:"Banco", av:"#fff1e6", e:"🏦", fijo:"Tu pago fue recibido", h:"ayer"}];
+  let html = "";
+  F.forEach((f,k)=>{
+    let ult=f.fijo, h=f.h, op=1, dy=0, cls="", tn="", badge="";
+    if (!f.fijo){
+      const a = prog(t, T.esc+0.15+0.3*k, 0.25); op = 0.35+0.65*a; dy = 16*(1-a);
+      ult = (a>0?TK("#8696a0"):"") + "Me duele una muela. ¿Tienen cita hoy?"; h = a>0 ? "9:00 p.m." : "ayer";
+      if (k===1 && t>=T.uno+0.2 && t<T.otro-0.05){ ult="escribiendo…"; cls="escr"; }
+      if (t>=f.r-0.05){ ult=f.txt; h=f.h; tn="nuevo"; badge=`<span class="badge" style="transform:scale(${0.4+0.6*prog(t,f.r-0.05,0.25)})">1</span>`; }
+    }
+    html += `<div class="fila" style="top:${226+k*84+dy}px;opacity:${op}"><div class="av" style="background:${f.av}">${f.e}</div>
+      <div class="txt"><div class="l1"><span class="nom">${f.nom}</span><span class="t ${tn}">${h}</span></div>
+      <div class="l2"><span class="ult ${cls}">${ult}</span>${badge}</div></div></div>`;
+  });
+  $('filas').innerHTML = html;
+  if (t < T.otro-0.15) noti(t, T.uno, "Consultorio Dental Centro", "Sí, claro. Te esperamos a las 9:30.", T.otro-0.1);
+  else noti(t, T.otro, "Clínica Dental Norte", "Hola, sí tenemos espacio.");
+}
+
+function llamada(t, T){           // reel 4: suena, nadie contesta -> llamada perdida -> mensaje sin responder
+  $('chats').style.display = 'none'; $('noti').style.display = 'none';
+  const perd = prog(t,T.cont-0.1,0.4), k2 = prog(t,T.cont-0.1,0.5);
+  camara(1.48 + 0.05*ease(t/5) + 0.12*k2, 215, 400 - 200*k2, -9 + 7*ease(t/7.8), 4 - 3*ease(t/7.8), golpeEn(t,T.cont) + golpeEn(t,T.msj));
+  $('llamada').style.opacity = 1-perd;
+  $('bloqueo').style.transform = 'none';
+  $('hb').textContent = "11:49"; $('fb').textContent = "martes, 20 de octubre";
+  for (const [id,fase0] of [['aro1',0],['aro2',0.5]]){                // el aviso que late mientras suena
+    const f = (t*0.9+fase0)%1, r = 80+90*f; const a = $(id);
+    a.style.width = a.style.height = (2*r)+"px"; a.style.marginLeft = (-r)+"px"; a.style.marginTop = (-r)+"px"; a.style.opacity = 1-f;
+  }
+  $('aceptar').style.transform = `translateY(${-6*Math.abs(Math.sin(t*5))}px)`;
+  let pila = "";
+  const n1 = prog(t,T.cont+0.15,0.35), n2 = prog(t,T.msj-0.1,0.35);
+  const y = 300;
+  if (n2>0) pila += `<div class="nb" style="top:${y-30+30*n2}px;opacity:${n2}"><div class="ap" style="background:#25d366">${BURBUJA}</div>
+     <div><div class="n1">Cliente nuevo</div><div class="n2">¿Están abiertos? Es urgente.</div></div><div class="ahora">ahora</div></div>`;
+  if (n1>0) pila += `<div class="nb" style="top:${y + 98*n2 - 30 + 30*n1}px;opacity:${n1}"><div class="ap" style="background:#ff3b30">${TELEF}</div>
+     <div><div class="n1">Llamada perdida</div><div class="n2">Cliente nuevo · 11:48 p.m.</div></div><div class="ahora">1 min</div></div>`;
+  $('pila').innerHTML = pila;
+}
+function render(t, T, escena){ const _f = document.getElementById("firma"); if (_f) _f.textContent = (window.MARCAS && (window.MARCAS[(T && T.marca) || "ejemplo"] || {}).firma) || ""; (escena==='llamada' ? llamada : chats2)(t, T); }
+</script></body></html>

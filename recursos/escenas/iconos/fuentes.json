@@ -1,0 +1,152 @@
+{
+ "alerta": {
+  "tema": "alerta",
+  "titulo": "warning",
+  "url": "https://lottiefiles.com/animations/warning-6Hz20v0HcO",
+  "autor": "/o2o6mzg5m2f2xmqz",
+  "descargas": 836,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "alerta_1.json",
+  "colores": 3
+ },
+ "apreton": {
+  "tema": "apreton",
+  "titulo": "handshake",
+  "url": "https://lottiefiles.com/animations/handshake-T9KHEl2Khx",
+  "autor": "/2jiivsa5bsjs4pj5",
+  "descargas": 210,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "apreton_1.json",
+  "colores": 2
+ },
+ "buscar": {
+  "tema": "buscar",
+  "titulo": "search",
+  "url": "https://lottiefiles.com/animations/search-yGOU7S31YU",
+  "autor": "/jnlzumtamc",
+  "descargas": 144,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "buscar_1.json",
+  "colores": 7
+ },
+ "calendario": {
+  "tema": "calendario",
+  "titulo": "calendar",
+  "url": "https://lottiefiles.com/animations/calendar-oeOFVArAHf",
+  "autor": "/iv1cyfnsfi",
+  "descargas": 51,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "calendario_2.json",
+  "colores": 2
+ },
+ "chat": {
+  "tema": "chat",
+  "titulo": "chat",
+  "url": "https://lottiefiles.com/animations/chat-fYVJL2UT1B",
+  "autor": "/9xste3wdt7",
+  "descargas": 39,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "chat_3.json",
+  "colores": 5
+ },
+ "cronometro": {
+  "tema": "cronometro",
+  "titulo": "stopwatch",
+  "url": "https://lottiefiles.com/animations/stopwatch-8Smmw7K7Jn",
+  "autor": "/jrvck7s2jw",
+  "descargas": 37,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "cronometro_1.json",
+  "colores": 2
+ },
+ "dinero": {
+  "tema": "dinero",
+  "titulo": "money",
+  "url": "https://lottiefiles.com/animations/money-1IzVTfQuv8",
+  "autor": "/6zo2dpsu2ln5qbas",
+  "descargas": 92,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "dinero_1.json",
+  "colores": 3
+ },
+ "estrellas": {
+  "tema": "estrellas",
+  "titulo": "stars reviews",
+  "url": "https://lottiefiles.com/animations/stars-reviews-s2hMu9Ovzj",
+  "autor": "/zf6omcreti",
+  "descargas": 19,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "estrellas_1.json",
+  "colores": 1
+ },
+ "grafica": {
+  "tema": "grafica",
+  "titulo": "growth",
+  "url": "https://lottiefiles.com/animations/growth-zDvfCYsrCV",
+  "autor": "/43cr1dtx19piidou",
+  "descargas": 199,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "grafica_1.json",
+  "colores": 6
+ },
+ "megafono": {
+  "tema": "megafono",
+  "titulo": "red megaphone",
+  "url": "https://lottiefiles.com/animations/red-megaphone-hmtoIhNU4g",
+  "autor": "/o37efmlbie",
+  "descargas": 280,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "megafono_1.json",
+  "colores": 9
+ },
+ "notificacion": {
+  "tema": "notificacion",
+  "titulo": "bell notification",
+  "url": "https://lottiefiles.com/animations/bell-notification-HKXpBRJVhd",
+  "autor": "/3h1skmqte1",
+  "descargas": 45,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "notificacion_2.json",
+  "colores": 1
+ },
+ "palomita": {
+  "tema": "palomita",
+  "titulo": "success check ",
+  "url": "https://lottiefiles.com/animations/success-check-J2DJhBJPmT",
+  "autor": "/ng2so5t8sgz0e0ak",
+  "descargas": 97,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "palomita_1.json",
+  "colores": 9
+ },
+ "pin": {
+  "tema": "pin",
+  "titulo": "location pin",
+  "url": "https://lottiefiles.com/animations/untitled-file-euh5bzUnlK",
+  "autor": "/qf1j22bzwqawctr7",
+  "descargas": 2,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "pin_3.json",
+  "colores": 3
+ },
+ "reloj": {
+  "tema": "reloj",
+  "titulo": "clock time",
+  "url": "https://lottiefiles.com/animations/clock-time-YX86xw76OL",
+  "autor": "/fsdgmitcdl32sui5",
+  "descargas": 3156,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "reloj_1.json",
+  "colores": 2
+ },
+ "telefono": {
+  "tema": "telefono",
+  "titulo": "phone_ringing",
+  "url": "https://lottiefiles.com/animations/phone-ringing-USCdUODH8b",
+  "autor": "/tanjster",
+  "descargas": 105,
+  "licencia": "Lottie Simple License (gratuita, pública)",
+  "archivo": "telefono_1.json",
+  "colores": 3
+ }
+}

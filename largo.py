@@ -9,6 +9,7 @@ El metodo completo esta en largo/LEEME.md y en el skill `editar-largo`.
     python largo.py revisar  <proyecto>          # escucha cada tramo y marca lo que no cuadra
     python largo.py amarrar  <proyecto>          # subtitulos y tiempos finales (texto_limpio.txt)
     python largo.py stock    <proyecto>          # stock.json -> clips + hoja de contactos
+    python largo.py motion   <proyecto>          # escenas.json -> graficos animados con tu marca
     python largo.py armar    <proyecto> [--nombre N] [--subtitulos]
 
 <proyecto> es un nombre (vive en proyectos/<nombre>/) o una ruta a una carpeta.
@@ -38,6 +39,10 @@ def main():
     p.add_argument("--modelo", default="large-v3")
     p = sub.add_parser("stock", help="baja el stock de stock.json y hace la hoja de contactos")
     p.add_argument("proyecto")
+    p = sub.add_parser("motion", help="captura los graficos de escenas.json con la marca")
+    p.add_argument("proyecto")
+    p.add_argument("piezas", nargs="*")
+    p.add_argument("--revisar", action="store_true", help="solo comprueba que existan las frases")
     p = sub.add_parser("armar", help="crea el proyecto en CapCut")
     p.add_argument("proyecto")
     p.add_argument("--nombre")
@@ -66,6 +71,9 @@ def main():
     elif a.paso == "stock":
         from largo import stock_largo
         stock_largo.main(c)
+    elif a.paso == "motion":
+        from largo import motion
+        motion.main(c, a.piezas or None, a.revisar)
     elif a.paso == "armar":
         from largo import armar
         armar.main(c, a.nombre, a.subtitulos)

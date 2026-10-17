@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<!-- TARJETA LATERAL del banco (14-oct-2026): la que entra a un lado MIENTRAS él habla, sin taparlo. Reemplaza a las
+dibujadas en PIL (motion_largo.py / motion.py), que se veían «de PowerPoint». Fondo TRANSPARENTE: capturar con --alfa.
+T = {
+  marca: id de recursos/marcas/ (por defecto "ejemplo"),
+  t_in, t_out:   entra y sale (s). Sale en 0.35 s.
+  lado: "der" | "izq",  y: px desde arriba (por defecto 15% del alto),  ancho: px (por defecto 600 en 16:9)
+  etiqueta: "¿Por qué lo perdiste?"         (mono, en acento, arriba)
+  titulo: "¿Cuánto tardas en contestar?"   (opcional, grande; puede llevar \n)
+  filas: [{txt, t, ico}]   ico: "num" | "bien" | "mal" | "" — cada fila entra en SU tiempo t
+  pie: {txt, t}            (opcional, en acento, abajo)
+  icono: {nombre, t, loop}  (opcional) ícono animado del banco arriba a la derecha (iconos/fuentes.json)
+}
+Lo que la hace verse profesional: vidrio con desenfoque y sombra en dos capas, filo de luz arriba, la tarjeta CRECE
+con su lista, cada fila entra con resorte y su icono rebota, y un leve brillo recorre la tarjeta al entrar. -->
+<link rel="stylesheet" href="../base/base.css">
+<style>
+  #tj{position:absolute;overflow:hidden;padding:30px 34px 26px;border-radius:30px;
+      background:linear-gradient(160deg,color-mix(in srgb,var(--fondo1) 92%,transparent),color-mix(in srgb,var(--fondo2) 95%,transparent))}  /* sólida: capturada sin fondo no puede desenfocar el video de atrás */
+  #tj::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--acento);border-radius:30px 0 0 30px}
+  #barrido{position:absolute;top:0;bottom:0;width:120px;background:linear-gradient(100deg,transparent,rgba(255,255,255,.10),transparent);pointer-events:none}
+  #et{margin-bottom:16px}
+  #ti{font:700 46px/1.12 var(--titulos);margin-bottom:12px;white-space:pre-line}
+  .fila{display:flex;align-items:center;gap:20px;height:70px;font:600 32px var(--cuerpo);white-space:nowrap}
+  .ico{width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center}
+  .num{border-radius:50%;background:var(--acento);color:#fff;font:700 26px var(--titulos)}
+  .fila.f-mal .tx{color:var(--tenue);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--mal) 70%,transparent);text-decoration-thickness:3px}
+  #pie{font:700 34px var(--titulos);color:var(--acento);margin-top:14px;white-space:pre-line}
+  .vertical .fila{font-size:40px;height:84px} .vertical #ti{font-size:58px} .vertical #pie{font-size:42px}
+</style></head><body class="alfa">
+<div id="tj" class="vidrio"><div id="barrido"></div><div id="icono" style="position:absolute;right:22px;top:16px;width:96px;height:96px"></div><div id="et" class="etiqueta"></div><div id="ti"></div><div id="filas"></div><div id="pie"></div></div>
+<script src="../base/base.js"></script><script src="../base/lottie.min.js"></script><script src="../iconos/iconos.js"></script><script src="../iconos/en_escena.js"></script>
+<script>
+const DEFAULT = {marca:"ejemplo", t_in:0.2, t_out:4.6, lado:"der", etiqueta:"¿Por qué lo perdiste?", titulo:"",
+  filas:[{txt:"Estabas caro", t:0.8, ico:"mal"}, {txt:"Otro era mejor", t:1.6, ico:"mal"}, {txt:"Contestaste tarde", t:2.6, ico:"bien"}],
+  pie:null};
+const SVG = {
+  bien: c => `<svg viewBox="0 0 48 48" width="48" height="48"><circle cx="24" cy="24" r="22" fill="${c}" opacity=".18"/><path d="M13 25l7 7 15-16" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  mal:  c => `<svg viewBox="0 0 48 48" width="48" height="48"><circle cx="24" cy="24" r="22" fill="${c}" opacity=".14"/><path d="M16 16l16 16M32 16L16 32" stroke="${c}" stroke-width="5" stroke-linecap="round"/></svg>`};
+function render(t, T){
+  T = Object.assign({}, DEFAULT, T); marca(T);
+  const V = vertical(), W = innerWidth, H = innerHeight, css = getComputedStyle(document.body);
+  const ancho = T.ancho || (V ? W - 120 : 600), y = T.y != null ? T.y : (V ? H*0.10 : H*0.15);
+  const tj = $('tj'); tj.style.width = ancho + 'px'; tj.style.top = y + 'px';
+  // entrada/salida: desliza desde su orilla, con desenfoque que se aclara; fuera de su tiempo, invisible
+  let a = 0; if (t >= T.t_in && t < T.t_out) a = prog(t, T.t_in, 0.42); else if (t >= T.t_out) a = 1 - prog(t, T.t_out, 0.35);
+  const izq = T.lado === 'izq' || V; const x0 = izq ? 60 : W - 60 - ancho; const dx = (izq ? -1 : 1) * 70 * (1 - a);
+  tj.style.left = (V ? (W - ancho)/2 : x0) + 'px';
+  tj.style.opacity = a; tj.style.transform = `translateX(${V ? 0 : dx}px) translateY(${V ? 40*(1-a) : 0}px) scale(${0.96 + 0.04*a})`;
+  tj.style.filter = `blur(${6*(1-a)}px)`;
+  $('barrido').style.left = (-140 + (ancho + 280) * prog(t, T.t_in + 0.15, 0.9)) + 'px';
+  pintaIcono($('icono'), t, T.icono, T.marca); if (T.icono) $('ti').style.paddingRight = '96px';
+  $('et').textContent = T.etiqueta || ''; $('et').style.display = T.etiqueta ? 'block' : 'none';
+  $('ti').textContent = T.titulo || ''; $('ti').style.display = T.titulo ? 'block' : 'none';
+  $('ti').style.opacity = prog(t, T.t_in + 0.2, 0.3);
+  const acento = css.getPropertyValue('--acento').trim(), tenue = css.getPropertyValue('--tenue').trim();
+  let html = '';
+  (T.filas || []).forEach((f, k) => {
+    const e = prog(t, f.t - 0.12, 0.32); if (e <= 0) return;
+    const r = resorte(t, f.t - 0.12, 0.45), ico = f.ico || '';
+    let icon = '';
+    if (ico === 'num') icon = `<div class="ico num" style="transform:scale(${0.4+0.6*r})">${k+1}</div>`;
+    else if (ico === 'bien') icon = `<div class="ico" style="transform:scale(${0.4+0.6*r})">${SVG.bien(acento)}</div>`;
+    else if (ico === 'mal') icon = `<div class="ico" style="transform:scale(${0.4+0.6*r})">${SVG.mal(tenue)}</div>`;
+    html += `<div class="fila f-${ico}" style="opacity:${e};transform:translateX(${28*(1-e)}px)">${icon}<span class="tx">${f.txt}</span></div>`;
+  });
+  $('filas').innerHTML = html;
+  const p = $('pie'); if (T.pie){ p.textContent = T.pie.txt; const e = prog(t, T.pie.t - 0.12, 0.32); p.style.opacity = e; p.style.transform = `translateY(${16*(1-e)}px)`; p.style.display='block'; } else p.style.display='none';
+}
+</script></body></html>

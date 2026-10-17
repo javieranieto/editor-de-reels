@@ -1,0 +1,65 @@
+/* Escenas WEB (buscador, mapa, reseñas) — 14-oct-2026.
+   El dispositivo cambia con la orientación: en 16:9 es una VENTANA DE NAVEGADOR (pestañas + barra de direcciones),
+   en 9:16 es un TELÉFONO (mismo marco que telefono/telefono.css). Lo de dentro (#pantalla) es la interfaz.
+   Estilo reconocible de buscador / mapa / reseñas, SIN logos ni nombres de terceros. */
+:root{--azulweb:#1a0dab;--gristexto:#4d5156;--grisclaro:#70757a;--linea:#e3e5e8;--estrella:#f6b01e;--abierto:#188038;--cerrado:#d93025;
+  --ui:"Segoe UI",Roboto,Arial,sans-serif}
+#escena{position:absolute;perspective:2600px;z-index:1}  /* encima de la luz de base.css: la interfaz no se tiñe */
+#disp{position:absolute;inset:0;transform-style:preserve-3d}
+#pantalla{position:absolute;overflow:hidden;background:#fff;font-family:var(--ui);color:#202124}
+#brillo{position:absolute;inset:0;pointer-events:none;z-index:60}
+
+/* ---------- navegador (16:9) ---------- */
+.horizontal #disp{border-radius:14px;background:#dfe3e9;
+  box-shadow:0 70px 140px rgba(0,0,0,.55),0 24px 50px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.18)}
+.horizontal #pantalla{left:0;right:0;top:86px;bottom:0;border-radius:0 0 14px 14px}
+.horizontal #brillo{border-radius:14px;background:linear-gradient(115deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 30%,rgba(255,255,255,0) 75%,rgba(255,255,255,.04) 100%)}
+.nav-tabs{position:absolute;left:0;right:0;top:0;height:42px;display:flex;align-items:flex-end;padding-left:92px;gap:2px}
+.nav-luces{position:absolute;left:20px;top:15px;display:flex;gap:9px}
+.nav-luces i{width:13px;height:13px;border-radius:50%;display:block}
+.nav-tab{height:34px;width:250px;border-radius:10px 10px 0 0;display:flex;align-items:center;gap:9px;padding:0 14px;
+  font:13px var(--ui);color:#3c4043;white-space:nowrap;overflow:hidden}
+.nav-tab.on{background:#fff;box-shadow:0 -1px 0 rgba(0,0,0,.04)}
+.nav-tab .fav{width:16px;height:16px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center}
+.nav-tab .tt{flex:1;overflow:hidden;text-overflow:ellipsis}
+.nav-tab .x{color:#5f6368;font-size:13px}
+.nav-barra{position:absolute;left:0;right:0;top:42px;height:44px;background:#fff;display:flex;align-items:center;gap:16px;padding:0 16px;
+  border-bottom:1px solid #e3e5e8}
+.nav-barra .ic{width:20px;height:20px;color:#5f6368;flex:none}
+.nav-omni{flex:1;height:32px;border-radius:16px;background:#f1f3f4;display:flex;align-items:center;gap:10px;padding:0 14px;
+  font:14px var(--ui);color:#202124;white-space:nowrap;overflow:hidden}
+.nav-omni .ph{color:#80868b}
+.nav-perfil{width:26px;height:26px;border-radius:50%;flex:none;font:600 13px var(--ui);color:#fff;display:flex;align-items:center;justify-content:center}
+.vertical .nav-tabs,.vertical .nav-barra{display:none}
+
+/* ---------- teléfono (9:16) ---------- */
+.vertical #disp{border-radius:64px;background:#111;
+  box-shadow:0 60px 120px rgba(0,0,0,.55),0 20px 40px rgba(0,0,0,.4),inset 0 0 0 2px #3a3a3a,inset 0 0 0 5px #0b0b0b}
+.vertical #pantalla{left:14px;right:14px;top:14px;bottom:14px;border-radius:50px}
+.vertical #brillo{border-radius:64px;background:linear-gradient(115deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 35%,rgba(255,255,255,0) 70%,rgba(255,255,255,.05) 100%)}
+.tel-isla{position:absolute;top:12px;left:50%;width:120px;height:34px;margin-left:-60px;border-radius:20px;background:#000;z-index:40}
+.tel-barra{position:absolute;top:0;left:0;right:0;height:54px;display:flex;justify-content:space-between;align-items:center;
+  padding:8px 32px 0;font:600 16px var(--ui);z-index:39;color:#111}
+.tel-barra .ico{display:flex;gap:6px;align-items:center;font-size:12px;letter-spacing:-1px}
+.tel-bat{width:25px;height:12px;border:2px solid currentColor;border-radius:4px;position:relative}
+.tel-bat::after{content:"";position:absolute;inset:1px;right:6px;background:currentColor;border-radius:1px}
+.tel-home{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#111;z-index:39}
+.horizontal .tel-isla,.horizontal .tel-barra,.horizontal .tel-home{display:none}
+
+/* velo inferior en vertical: la franja de subtítulos (70-82 % del alto) queda limpia y oscura */
+#velo{position:absolute;left:0;right:0;top:64%;bottom:0;pointer-events:none;z-index:45;
+  background:linear-gradient(to bottom,rgba(10,15,28,0) 0%,color-mix(in srgb,var(--fondo3) 88%,transparent) 22%,color-mix(in srgb,var(--fondo3) 94%,transparent) 100%)}
+.horizontal #velo{display:none}
+body.alfa #velo{display:none}
+
+/* ---------- piezas comunes de la interfaz ---------- */
+.estr{display:inline-flex;gap:1px;vertical-align:-2px}
+.estr svg{display:block}
+.cursor{position:absolute;left:0;top:0;width:26px;height:34px;z-index:55;pointer-events:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.toque{position:absolute;border-radius:50%;pointer-events:none;z-index:54;background:rgba(0,0,0,.18)}
+.vertical .cursor{display:none}
+.horizontal .toque.solo-v{display:none}
+.vertical .nav-luces{display:none}
+/* la firma lleva una placa oscura: cuando la cámara se acerca, la interfaz pasa por debajo y la firma se sigue leyendo */
+.firma{padding:7px 13px;margin:-7px 0 0 -13px;border-radius:9px;z-index:70;
+  background:color-mix(in srgb,var(--fondo3) 72%,transparent);backdrop-filter:blur(8px)}
