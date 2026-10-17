@@ -12,6 +12,8 @@ El metodo completo esta en largo/LEEME.md y en el skill `editar-largo`.
     python largo.py motion   <proyecto>          # escenas.json -> graficos animados con tu marca
     python largo.py armar    <proyecto> [--nombre N] [--subtitulos]
     python largo.py reels    <proyecto> [nombre ...]   # reels.json -> reels verticales en CapCut
+    python largo.py miniatura <proyecto> [--componer]  # cuadros candidatos / miniaturas con tu marca
+    python largo.py aprender <proyecto> --capcut N     # que cambiaste en CapCut (tu estilo)
 
 <proyecto> es un nombre (vive en proyectos/<nombre>/) o una ruta a una carpeta.
 CapCut tiene que estar CERRADO para `armar`.
@@ -47,6 +49,12 @@ def main():
     p = sub.add_parser("reels", help="reels verticales del largo (reels.json), estilo ventana")
     p.add_argument("proyecto")
     p.add_argument("nombres", nargs="*")
+    p = sub.add_parser("miniatura", help="cuadros candidatos; con --componer, las miniaturas de miniatura.json")
+    p.add_argument("proyecto")
+    p.add_argument("--componer", action="store_true")
+    p = sub.add_parser("aprender", help="compara lo generado con como lo dejaste en CapCut")
+    p.add_argument("proyecto")
+    p.add_argument("--capcut", required=True, help="nombre del proyecto en CapCut")
     p = sub.add_parser("armar", help="crea el proyecto en CapCut")
     p.add_argument("proyecto")
     p.add_argument("--nombre")
@@ -81,6 +89,12 @@ def main():
     elif a.paso == "reels":
         from largo import reels
         reels.main(c, a.nombres or None)
+    elif a.paso == "miniatura":
+        from largo import miniatura
+        miniatura.componer(c) if a.componer else miniatura.candidatos(c)
+    elif a.paso == "aprender":
+        from largo import aprender
+        aprender.comparar(c, a.capcut)
     elif a.paso == "armar":
         from largo import armar
         armar.main(c, a.nombre, a.subtitulos)

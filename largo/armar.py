@@ -119,6 +119,20 @@ def plan(c):
     sfx.sort(key=lambda e: e["ini"])
 
     musica = leer(c, "musica.json", falta=None)
+    if musica:
+        musica = dict(musica)
+        if not os.path.isabs(musica["archivo"]):
+            musica["archivo"] = os.path.join(c, musica["archivo"])
+        if not os.path.exists(musica["archivo"]):
+            raise SystemExit("musica.json apunta a un archivo que no existe: %s" % musica["archivo"])
+        if "volumen" not in musica:
+            # MEDIDO contra la voz del corte, con LUFS: en una charla las pausas hunden el
+            # promedio de la voz y con el metodo de los reels la musica salia inaudible.
+            from pipeline import musica as mu
+            musica["volumen"] = mu.volumen_bajo_voz(musica["archivo"], os.path.join(c, "corte_audio.wav"),
+                                                    metodo="lufs", log=print)
+            print("  musica: volumen %.3f, medido contra la voz" % musica["volumen"])
+        musica.setdefault("fade_in", 1_000_000)
     return {"segs": segs, "broll": broll, "overlays": overlays, "sfx": sfx, "musica": musica,
             "TL": TL, "lienzo": tuple(proyecto["lienzo"]), "quitados": quitados}
 
@@ -140,5 +154,7 @@ def main(c, nombre=None, subtitulos=False):
                                sfx=p["sfx"] or None, musica=p["musica"], captions="clasico",
                                srt_path=os.path.join(c, "subtitulos.srt") if subtitulos else None)
     escribir(c, "armado.json", {k: p[k] for k in ("segs", "broll", "overlays", "sfx")})
+    from largo import aprender
+    aprender.guardar_generado(c, nombre)   # para `largo.py aprender`: que cambio el usuario despues
     print("CREADO en CapCut: %r | %d piezas | %d encima | %d sonidos | %.1f s"
           % (nombre, r["segmentos"], r["broll"] + r["overlays"], r["sfx"], r["duracion_us"] / 1e6))

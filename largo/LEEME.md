@@ -27,6 +27,9 @@ python largo.py stock    "mi video"     # baja el stock; MIRA hoja_stock.jpg
 python largo.py motion   "mi video"     # los gráficos de escenas.json con tu marca; MIRA las hojas
 python largo.py armar    "mi video" --nombre "Mi video LARGO"     # CapCut cerrado
 python largo.py reels    "mi video"     # los reels de reels.json, cada uno ya armado en CapCut
+python largo.py miniatura "mi video"    # cuadros candidatos (MIRA candidatos.jpg) ...
+python largo.py miniatura "mi video" --componer     # ... y las miniaturas de miniatura.json
+python largo.py aprender "mi video" --capcut "Mi video LARGO"   # después de editarlo tú
 ```
 
 `"mi video"` vive en `proyectos/mi video/`. Puedes tener tomas A (principal) y R (retomas):
@@ -84,6 +87,20 @@ las frases que repetiste en otra toma se piden de ahí.
   pieza. La ventana no cae sobre el gancho ni sobre los últimos 2 s; la frase clave va fuera de la
   ventana (si choca, `reels` avisa y la quita: ánclala antes).
 - **Un proyecto de CapCut con el mismo nombre no se sobreescribe**: puede que ya lo editaste.
+
+## Música, miniaturas y tu estilo
+
+- **Música:** `musica.json` con `{"archivo": "musica.mp3"}`. El volumen se **mide** contra tu
+  voz (LUFS, 18 dB debajo); no lo pongas a ojo. La pista tiene que ser libre: de una biblioteca
+  sin derechos, o generada (Magnific, por ejemplo). Una canción con derechos te silencian el video.
+- **Si tu voz se grabó bajita** (−30 LUFS o menos), todo el video sale bajo: súbela al exportar.
+- **Miniaturas:** la cara sale de un cuadro REAL. El detector escoge cuadros con la cara grande y
+  nítida, pero **no sabe si tienes los ojos cerrados**: mira `candidatos.jpg`. Texto a la
+  izquierda, la cara a la derecha, todo en el 85 % de arriba; revisa la vista de 320 px.
+- **Aprender tu estilo:** cada `armar`/`reels` guarda cómo salió el proyecto. Edítalo en CapCut
+  como siempre y corre `aprender`: dice qué quitaste, si apretaste los cortes, el volumen, el
+  zoom y los textos corregidos. Lo que se repita en dos o tres videos se escribe en
+  `mi_estilo.md` (raíz del repo, solo en tu máquina) y Claude lo aplica la próxima vez.
 
 ## Para Claude
 

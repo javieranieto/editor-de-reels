@@ -375,6 +375,8 @@ def armar(L, plan, mo, cierre):
     r = cl.construir_segmentos(plan["nombre"], segs, (W, H, 30), palabras=plan["palabras"], captions="palabra",
                                zoom="no", broll=broll, frases=frases, overlays=overlays or None, sfx=sfx or None,
                                letras="resalte", caption_altura=CAPTION_Y)
+    from largo import aprender
+    aprender.guardar_generado(L.c, plan["nombre"])
     print("CREADO %-26s %.1f s | ventana %.1f-%.1f | %d cortes | subtitulos %d | %d encima | %d sonidos | frase: %s"
           % (plan["nombre"], total, A, B, len(segs), r.get("subtitulos", 0), r["broll"] + r["overlays"], r["sfx"],
              ", ".join(f["texto"] for f in frases) or "-"))

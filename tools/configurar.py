@@ -99,6 +99,44 @@ def main():
                                      para if valor else motivo))
     print("          Cada archivo lleva una linea: api_key: tu_llave")
 
+    # Lo que se puede hacer con lo que hay: cada cosa dice que le falta, en vez de fallar a medias.
+    print("\nQue puedes hacer en esta computadora:")
+    try:
+        import playwright  # noqa: F401
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            chromium = os.path.exists(p.chromium.executable_path)
+    except Exception:
+        playwright = chromium = None
+    try:
+        import cv2  # noqa: F401
+        hay_cv = True
+    except ImportError:
+        hay_cv = False
+    marcas_dir = os.path.join(BASE, "recursos", "marcas")
+    propias = [f[:-5] for f in os.listdir(marcas_dir) if f.endswith(".json") and f != "ejemplo.json"] \
+        if os.path.isdir(marcas_dir) else []
+    pexels = llaves.leer("pexels")[0] is not None
+    capacidades = [
+        ("Cortar un video hablado y armarlo en CapCut (reel.py, largo.py)", not FALTA, "lo de arriba"),
+        ("Stock de video en los huecos", pexels, "llave de Pexels en .secrets/pexels.yaml (gratis)"),
+        ("Graficos animados y reels estilo ventana", bool(chromium),
+         "pip install playwright  y luego  python -m playwright install chromium"),
+        ("Encuadrar la cara en los reels y elegir cuadros para miniaturas", hay_cv, "pip install opencv-python"),
+        ("Graficos con TU marca", bool(propias),
+         "copia recursos/marcas/ejemplo.json con tus colores (ver su LEEME.md); mientras, sale la de ejemplo"),
+        ("Musica", True, ""),
+    ]
+    for cosa, si, falta in capacidades:
+        print("  [%s]  %s" % ("SI" if si else "--", cosa))
+        if not si and falta:
+            print("          Falta: %s" % falta)
+    if propias:
+        print("          Tus marcas: %s" % ", ".join(propias))
+    print("  [..]  Musica: pon tu pista (de una biblioteca libre o generada) y su nombre en musica.json;\n"
+          "        el volumen se mide solo contra tu voz.")
+    print("  [..]  Miniaturas con fondo recortado o imagenes generadas: Magnific (opcional, de paga, por MCP).")
+
     print("\n" + "=" * 54)
     if FALTA:
         print("Falta resolver %d cosa(s) antes de usarlo." % len(FALTA))

@@ -30,3 +30,6 @@ recursos/marcas/*.json
 
 # los iconos se generan con las marcas de cada quien (capturar.py lo hace solo)
 recursos/escenas/iconos/iconos.js
+
+# el estilo de cada quien (lo escribe Claude con largo.py aprender) se queda en su maquina
+mi_estilo.md
