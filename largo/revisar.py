@@ -33,7 +33,9 @@ def main(c, solo=None, modelo="large-v3"):
             continue
         pz = [t for t in E if t["et"] == et]
         sil = np.zeros(int(0.25 * 16000), dtype=np.int16)   # un respiro entre piezas para que no se fundan
-        au = np.concatenate(sum([[AUD[t["f"]][int(t["s"] * 16000):int(t["e"] * 16000)], sil] for t in pz], []))
+        # tambien un respiro AL PRINCIPIO: sin silencio antes, Whisper se salta la primera palabra
+        # y la revision acusaba de «comida» una palabra que si estaba en el corte
+        au = np.concatenate([sil] + sum([[AUD[t["f"]][int(t["s"] * 16000):int(t["e"] * 16000)], sil] for t in pz], []))
         # El nombre lleva la etiqueta (por numero, al quitar un tramo la cache se desfasaba) Y una
         # huella del audio: si el tramo cambia, se vuelve a escuchar. Con solo la etiqueta, la
         # cache devolvia la transcripcion del corte ANTERIOR y la revision mentia.
