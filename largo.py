@@ -11,6 +11,7 @@ El metodo completo esta en largo/LEEME.md y en el skill `editar-largo`.
     python largo.py stock    <proyecto>          # stock.json -> clips + hoja de contactos
     python largo.py motion   <proyecto>          # escenas.json -> graficos animados con tu marca
     python largo.py armar    <proyecto> [--nombre N] [--subtitulos]
+    python largo.py reels    <proyecto> [nombre ...]   # reels.json -> reels verticales en CapCut
 
 <proyecto> es un nombre (vive en proyectos/<nombre>/) o una ruta a una carpeta.
 CapCut tiene que estar CERRADO para `armar`.
@@ -43,6 +44,9 @@ def main():
     p.add_argument("proyecto")
     p.add_argument("piezas", nargs="*")
     p.add_argument("--revisar", action="store_true", help="solo comprueba que existan las frases")
+    p = sub.add_parser("reels", help="reels verticales del largo (reels.json), estilo ventana")
+    p.add_argument("proyecto")
+    p.add_argument("nombres", nargs="*")
     p = sub.add_parser("armar", help="crea el proyecto en CapCut")
     p.add_argument("proyecto")
     p.add_argument("--nombre")
@@ -74,6 +78,9 @@ def main():
     elif a.paso == "motion":
         from largo import motion
         motion.main(c, a.piezas or None, a.revisar)
+    elif a.paso == "reels":
+        from largo import reels
+        reels.main(c, a.nombres or None)
     elif a.paso == "armar":
         from largo import armar
         armar.main(c, a.nombre, a.subtitulos)

@@ -19,9 +19,15 @@ El método completo está en `largo/LEEME.md`. **Léelo antes de empezar.** Aqu�
    sin agregar ni quitar palabras. Vuelve a correr `amarrar`.
 6. `stock.json` (~15-20 % del video, nunca sobre una cifra) → `python largo.py stock` →
    **mira `hoja_stock.jpg`** y quita lo que no venga al caso.
-7. `python largo.py armar "<nombre>" --nombre "<Nombre> LARGO"` con CapCut cerrado.
-8. Cuenta qué decidiste y por qué. El usuario decide el gusto; si corrige algo en CapCut,
+7. **Gráficos:** `escenas.json` (una idea por gráfico, con la marca del usuario de
+   `recursos/marcas/`; si no tiene, `ejemplo` y dile cómo hacer la suya) → `motion --revisar` →
+   `motion` → **mira las hojas**.
+8. `python largo.py armar "<nombre>" --nombre "<Nombre> LARGO"` con CapCut cerrado.
+9. **Reels:** propón 2-4 piezas continuas de 35-60 s con su gancho de dentro, su frase clave y
+   su ventana en `reels.json` → `python largo.py reels "<nombre>"` → mira las hojas.
+10. Cuenta qué decidiste y por qué. El usuario decide el gusto; si corrige algo en CapCut,
    pregúntale si quiere que esa forma se vuelva su regla.
 
 Lo que necesita cada parte: transcribir y armar, solo el editor. Stock: llave de Pexels en
-`.secrets/pexels.yaml`. Si falta algo, dilo y sigue con lo demás.
+`.secrets/pexels.yaml`. Gráficos y reels: `pip install playwright` + Chromium, y opencv-python
+para medir la cara. Si falta algo, dilo y sigue con lo demás.

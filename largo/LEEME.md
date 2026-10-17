@@ -1,8 +1,8 @@
 # Video largo (YouTube, horizontal)
 
 De una o varias tomas a un proyecto de CapCut armado: el corte por frases, los tiempos
-medidos en el audio, subtítulos limpios, stock y —en las siguientes versiones— gráficos
-animados, gancho y reels sacados del largo.
+medidos en el audio, subtítulos limpios, stock, gráficos animados con tu marca y reels
+verticales sacados del largo.
 
 **La idea:** lo editorial lo decide quien edita (o Claude, que es lo normal) en tres archivos
 de texto. Lo mecánico lo hacen los pasos. El código no sabe de qué trata tu video.
@@ -12,6 +12,8 @@ de texto. Lo mecánico lo hacen los pasos. El código no sabe de qué trata tu v
 | `orden.json` | tú o Claude | qué frases van y en qué orden |
 | `texto_limpio.txt` | tú o Claude | lo que se dijo, bien escrito (para subtítulos) |
 | `stock.json` | tú o Claude | qué video de stock va en qué frase |
+| `escenas.json` | tú o Claude | qué gráfico animado va en qué idea (ver `largo/motion.py`) |
+| `reels.json` | tú o Claude | qué reels salen del largo (ver `largo/reels.py`) |
 
 ## Los pasos
 
@@ -22,7 +24,9 @@ python largo.py cortar   "mi video"     # orden.json -> el corte medido en el au
 python largo.py revisar  "mi video"     # escucha cada tramo suelto y marca lo que no cuadra
 python largo.py amarrar  "mi video"     # subtítulos (escribe un texto_limpio.txt la 1.a vez)
 python largo.py stock    "mi video"     # baja el stock; MIRA hoja_stock.jpg
+python largo.py motion   "mi video"     # los gráficos de escenas.json con tu marca; MIRA las hojas
 python largo.py armar    "mi video" --nombre "Mi video LARGO"     # CapCut cerrado
+python largo.py reels    "mi video"     # los reels de reels.json, cada uno ya armado en CapCut
 ```
 
 `"mi video"` vive en `proyectos/mi video/`. Puedes tener tomas A (principal) y R (retomas):
@@ -69,11 +73,23 @@ las frases que repetiste en otra toma se piden de ahí.
 - **CapCut cerrado** para `armar`, y si ya editaste el proyecto a mano, volver a armarlo lo
   borra: genera con otro `--nombre`.
 
+## Gráficos y reels: lo que ya se aprendió
+
+- **Un tiempo es una FRASE**, nunca segundos: `{"frase": "agarra el último anuncio", "mas": -0.1}`.
+  `python largo.py motion "<p>" --revisar` comprueba que existan todas antes de capturar.
+- **L** = tarjeta a un lado mientras la persona habla; **P** = panel que ocupa la pantalla. Una
+  idea por gráfico, y ninguna tarjeta pasa segundos vacía esperando su primera fila (ponle título).
+- **Mira la hoja de cuadros y un cuadro encima del video**: que no tape la cara.
+- **Un reel es UNA pieza continua del largo** (35-60 s) con el gancho sacado de dentro de esa
+  pieza. La ventana no cae sobre el gancho ni sobre los últimos 2 s; la frase clave va fuera de la
+  ventana (si choca, `reels` avisa y la quita: ánclala antes).
+- **Un proyecto de CapCut con el mismo nombre no se sobreescribe**: puede que ya lo editaste.
+
 ## Para Claude
 
 Si alguien te dice *«edita este video»*: corre `preparar`, lee la transcripción completa,
 entiende de qué habla y para quién, y **propón** qué sale (el largo, cuánto dura, qué se
 queda fuera y por qué) antes de escribir `orden.json`. Escribe el motivo de cada tramo en
 `nota`. Después `cortar` → `revisar` (arregla lo que marque) → `amarrar` (escribe tú el texto
-limpio) → `stock` (mira la hoja) → `armar`. Cuenta en qué se fue cada decisión: el usuario
+limpio) → `stock` (mira la hoja) → `motion` (mira las hojas) → `armar` → `reels`. Cuenta en qué se fue cada decisión: el usuario
 decide el gusto.
