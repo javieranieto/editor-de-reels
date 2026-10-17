@@ -63,6 +63,18 @@ Lo que más vale no es el automático sino la revisión: abre Claude Code y píd
 *"revisa <nombre del proyecto>"*. Decide qué corte sobra, cuál frase es la tesis y qué cifra
 merece pantalla, y te explica por qué.
 
+## Video largo de YouTube
+
+De una o varias tomas a un proyecto de CapCut armado: el corte por frases medido en el audio,
+subtítulos limpios para YouTube y stock. Lo más cómodo es pedírselo a Claude: *«edita este
+video»*. Paso por paso y las trampas conocidas: `largo/LEEME.md`.
+
+```bash
+python largo.py preparar "mi video" --toma A="C:\videos\toma.mp4"
+python largo.py cortar "mi video" && python largo.py revisar "mi video"
+python largo.py amarrar "mi video" && python largo.py armar "mi video"
+```
+
 ## Videos animados dibujados a mano
 
 `animado/` dibuja un video por código —trazos a mano, cifras, un personaje— o una

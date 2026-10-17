@@ -61,6 +61,10 @@ def leer(servicio, campos=CAMPOS):
         datos = _leer_yaml(archivo)
     except Exception as e:
         return None, "no se pudo leer %s (%s)" % (archivo, str(e)[:80])
+    # Tambien se acepta la llave dentro del nombre del servicio (`pexels:\n  api_key: ...`),
+    # que es como la guardan otros sistemas: copiar el archivo tal cual tiene que funcionar.
+    if isinstance(datos.get(servicio), dict) and not any(datos.get(c) for c in campos):
+        datos = datos[servicio]
     for campo in campos:
         valor = datos.get(campo)
         if valor is None:
