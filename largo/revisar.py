@@ -21,6 +21,18 @@ def main(c, solo=None, modelo="large-v3"):
     from pipeline.transcribe import transcribe
     E = leer(c, "edl.json")
     G = leer(c, "guion_armado.txt").split("\n")
+    # guion_armado.txt trae UNA linea por tramo de orden.json, pero aqui se revisa por bloque
+    # (tramos seguidos con la misma etiqueta). Sin juntar las lineas del bloque, el bloque k se
+    # comparaba contra la linea k: con etiquetas repetidas, todo salia «!!» contra otro tramo.
+    O = leer(c, "orden.json", falta=None)
+    if O and len(O) <= len(G):
+        bloques = []
+        for i, o in enumerate(O):
+            et = o.get("etiqueta", "")
+            if not bloques or bloques[-1][0] != et:
+                bloques.append([et, []])
+            bloques[-1][1].append(G[i])
+        G = [" ".join(x[1]) for x in bloques]
     AUD = {k: muestras(os.path.join(c, "audio_%s.wav" % k)) for k in {t["f"] for t in E}}
     orden = []
     for t in E:
