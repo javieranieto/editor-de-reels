@@ -20,6 +20,24 @@ mío. Si quieres que te ayude a instalarlo o a adaptarlo a tu forma de trabajar,
 cobro: escríbeme por mensaje en cualquiera de mis redes. Y si te sirvió, dale una estrella
 al repo y cuéntame qué le mejorarías.
 
+## Así lo tengo yo (y me funciona)
+
+| | |
+|---|---|
+| Sistema | Windows 11 Home (build 26200) |
+| Procesador | Intel Core i5-12400F (6 núcleos, 12 hilos) |
+| Memoria | 64 GB |
+| Tarjeta de video | NVIDIA GeForce RTX 3050, 8 GB (transcribe en la tarjeta) |
+| CapCut | CapCut **Pro** de escritorio 9.3 |
+| Claude | Claude Code, plan **Max** de 100 dólares |
+| Programas | Python 3.13, ffmpeg 8.1, Git 2.51 |
+| Librerías | faster-whisper 1.2 (large-v3), Playwright 1.57 + Chromium, OpenCV 5 headless |
+
+**Lo que no he probado:** CapCut gratis con todo el flujo; Claude con un plan menor u otros
+asistentes (Codex, Cursor) — muy seguramente funciona, porque las instrucciones vienen en el
+repo, pero no lo garantizo; equipos sin tarjeta NVIDIA (transcribe con el procesador, más lento)
+o con menos de 16 GB de memoria.
+
 ## Antes de instalar: ¿tu computadora sirve?
 
 🔴 **Solo Windows con CapCut de escritorio.** No corre en Mac ni en Linux: el editor escribe

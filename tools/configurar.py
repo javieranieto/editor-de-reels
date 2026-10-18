@@ -122,7 +122,7 @@ def main():
         ("Stock de video en los huecos", pexels, "llave de Pexels en .secrets/pexels.yaml (gratis)"),
         ("Graficos animados y reels estilo ventana", bool(chromium),
          "pip install playwright  y luego  python -m playwright install chromium"),
-        ("Encuadrar la cara en los reels y elegir cuadros para miniaturas", hay_cv, "pip install opencv-python"),
+        ("Encuadrar la cara en los reels y elegir cuadros para miniaturas", hay_cv, "pip install opencv-python-headless"),
         ("Graficos con TU marca", bool(propias),
          "copia recursos/marcas/ejemplo.json con tus colores (ver su LEEME.md); mientras, sale la de ejemplo"),
         ("Musica", True, ""),

@@ -53,7 +53,7 @@ def cara(c, E, src):
     try:
         import cv2
     except ImportError:
-        print("  aviso: sin opencv-python no se mide la cara; encuadro al centro (pip install opencv-python)")
+        print("  aviso: sin opencv-python no se mide la cara; encuadro al centro (pip install opencv-python-headless)")
         return 0.5, 0.45
     modelo = os.path.join(RAIZ, "recursos", "modelos", "face_detection_yunet_2023mar.onnx")
     xs, ys = [], []
