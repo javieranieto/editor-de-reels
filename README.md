@@ -48,6 +48,9 @@ abajo. Una tarjeta NVIDIA es opcional: solo acelera la transcripción.
 
 ## Instalar
 
+Si ya usas Claude Code o VS Code, esto te toma unos minutos. Si no sabes de qué te hablo, estos
+pasos no te lo van a enseñar, pero te puedo ayudar con la instalación guiada (abajo).
+
 **Con Claude Code (lo más fácil).** Abre una carpeta vacía en VS Code (o donde uses Claude Code)
 y pégale esto:
 
