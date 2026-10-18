@@ -64,6 +64,11 @@ revisa todo esto y dice qué falta.
 `elevenlabs.yaml` (voz en off), `pixabay.yaml` (segunda fuente de stock). Cada archivo lleva una línea:
 `api_key: tu_llave`; las lee `pipeline/llaves.py`.
 
+**Antes de saltarte un paso por una llave, vuelve a mirar.** Lo que dijo `configurar.py` al
+instalar se queda viejo: la persona suele poner su llave DESPUÉS, a mitad de una sesión. Antes
+del stock (o de la voz), corre otra vez `python tools/configurar.py`. Si de verdad falta, dilo y
+sigue sin ese paso; nunca la des por faltante porque así estaba al principio.
+
 **Magnific (imágenes, música por MCP) es OPCIONAL y de pago**: el editor no lo necesita para
 nada. Si tienes cuenta, conéctalo **a nivel usuario**
 (`claude mcp add --scope user --transport http magnific https://mcp.magnific.com`) y no en el
