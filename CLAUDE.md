@@ -13,18 +13,51 @@ Todo lo de aquí se corre **desde la raíz de este repo** o con la
 ruta completa (`python reel.py ...`): los módulos resuelven sus rutas relativas a su
 propio archivo, no al directorio actual.
 
-## Requisitos — compruébalos antes de instalar nada más
+## Instalar — cuando te pidan instalarlo, sigue esto en orden
 
-- 🔴 **Windows con CapCut de escritorio.** No corre en Mac ni en Linux, y no es cuestión de
-  configurarlo: el generador escribe el proyecto en la carpeta de CapCut para Windows
-  (`%LOCALAPPDATA%\CapCut\User Data\Projects\com.lveditor.draft`).
-- **ffmpeg y ffprobe** en el PATH (`winget install Gyan.FFmpeg`).
-- **Python 3.8+** y `pip install -r requirements.txt` (faster-whisper, pycapcut,
-  Pillow). Solo `tools/referencias.py` pide además opencv-python.
-- GPU NVIDIA opcional: acelera mucho la transcripción (cuBLAS/cuDNN del requirements).
-- Solo para `animado/`: `pip install playwright` y Chrome (o `python -m playwright install
-  chromium`). El resto del editor no lo usa.
-- `python tools/configurar.py` revisa todo esto y dice qué falta.
+La persona abrió una carpeta (casi siempre vacía) y te pegó un prompt como *"instala el editor
+de reels"*. **Tú haces todo lo que se pueda hacer desde la terminal**; a ella solo le toca lo que
+no: bajar CapCut y, si quiere, sus llaves. Explica en una línea qué vas a instalar antes de cada
+paso: le estás pidiendo permiso para correr comandos en su computadora.
+
+1. 🔴 **Windows.** Si no es Windows, para ahí y díselo: el editor escribe el proyecto en la
+   carpeta de CapCut para Windows (`%LOCALAPPDATA%\CapCut\User Data\Projects\com.lveditor.draft`)
+   y no hay forma de configurarlo para Mac o Linux.
+2. **El repo.** Si la carpeta no lo tiene todavía:
+   `git clone https://github.com/javieranieto/editor-de-reels .` (con el punto, para que quede en
+   esa misma carpeta; si no está vacía, clónalo en una subcarpeta `editor-de-reels`). Si `git` no
+   existe: `winget install --id Git.Git -e`.
+3. **Python 3.9 o mayor.** ⚠️ En Windows, `python` puede ser el **atajo falso de la Microsoft
+   Store**: abre la tienda o no imprime nada. Compruébalo con `python --version`. Si falta o es
+   el atajo: `winget install --id Python.Python.3.12 -e`.
+4. **ffmpeg:** `winget install --id Gyan.FFmpeg -e`.
+   ⚠️ **Lo que instala `winget` no aparece en la terminal que ya estaba abierta.** No es que
+   haya fallado: el PATH se lee al abrir la terminal. Usa la ruta completa
+   (`%LOCALAPPDATA%\Programs\Python\Python312\python.exe`; ffmpeg queda en
+   `%LOCALAPPDATA%\Microsoft\WinGet\Links\`) o pídele que abra una terminal nueva.
+5. **Las librerías:** `python -m pip install -r requirements.txt` (transcripción, CapCut,
+   imágenes, gráficos y encuadre de cara) y luego `python -m playwright install chromium`.
+6. **Tarjeta NVIDIA** (si `nvidia-smi` contesta): pregúntale antes, porque son varios GB, y con
+   su sí: `python -m pip install nvidia-cublas-cu12 nvidia-cudnn-cu12`. Sin esto funciona igual,
+   transcribiendo con el procesador (más lento).
+7. **CapCut** es lo único que no puedes instalar tú: si `configurar.py` dice que falta, mándala a
+   capcut.com a bajar la versión de **escritorio** y a abrirla una vez y cerrarla (así crea su
+   carpeta de proyectos).
+8. **Comprueba:** `python tools/configurar.py`. Cuéntale el resultado con palabras, no pegues la
+   salida: qué quedó listo, qué falta y qué tiene que hacer ella.
+9. **Avísale lo que va a pasar la primera vez:** la primera transcripción baja el modelo de voz
+   (unos 3 GB, una sola vez), así que el primer video tarda más que los demás.
+10. **Las llaves son opcionales** y van en archivos de `.secrets/` (Pexels gratis para stock,
+    ElevenLabs para voz en off, Pixabay). **Nunca le pidas una llave por el chat:** crea el
+    archivo si te lo pide y que ella pegue la llave ahí. El formato es una línea:
+    `api_key: tu_llave`.
+11. **Al final:** dile cómo usarlo (*"pásame la ruta de tu video y dime: edítalo"*) y pídele que le
+    cuente a Javier cuánto tardó y dónde se atoró:
+    https://javiernieto.net/profesional/recursos/editor-de-reels/ — así se mejora esta lista.
+
+**Lo que hace falta, en resumen:** Windows, CapCut de escritorio, Claude Code (o un asistente
+parecido, sin probar), Python y ffmpeg. Tarjeta NVIDIA opcional. `python tools/configurar.py`
+revisa todo esto y dice qué falta.
 
 **Llaves** (todas opcionales; sin ellas el editor corta y arma igual): van en
 `.secrets/` de este repo (no sube a git), nunca en el chat. `pexels.yaml` (b-roll),

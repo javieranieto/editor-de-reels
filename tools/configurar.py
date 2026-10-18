@@ -25,21 +25,26 @@ def comando(nombre):
 
 
 def main():
+    if os.name != "nt":
+        print("Este editor solo funciona en Windows con CapCut de escritorio:")
+        print("escribe el proyecto en la carpeta de CapCut para Windows, y en Mac o Linux no hay donde.")
+        sys.exit(1)
     print("Revisando esta computadora\n")
 
     print("Programas:")
     ok("ffmpeg", comando("ffmpeg"),
-       "Instala con: winget install Gyan.FFmpeg   (y reinicia la terminal)")
+       "Instala con: winget install --id Gyan.FFmpeg -e   (y abre una terminal nueva)")
     ok("ffprobe", comando("ffprobe"), "Viene con ffmpeg")
 
     capcut = os.path.expandvars(r"%LOCALAPPDATA%\CapCut")
     drafts = os.path.join(capcut, "User Data", "Projects", "com.lveditor.draft")
-    ok("CapCut instalado", os.path.isdir(capcut), "Descarga CapCut para escritorio")
+    ok("CapCut instalado", os.path.isdir(capcut), "Bajalo de capcut.com (la version de ESCRITORIO, no la web)")
     ok("CapCut abierto al menos una vez", os.path.isdir(drafts),
        "Abre CapCut una vez y cierralo: crea la carpeta de proyectos")
 
     print("\nPython:")
-    ok("version 3.8 o mayor", sys.version_info >= (3, 8))
+    ok("version 3.9 o mayor", sys.version_info >= (3, 9),
+       "Instala con: winget install --id Python.Python.3.12 -e")
     for paquete, pip in (("faster_whisper", "faster-whisper"), ("pycapcut", "pycapcut")):
         try:
             __import__(paquete)
@@ -140,10 +145,19 @@ def main():
     print("\n" + "=" * 54)
     if FALTA:
         print("Falta resolver %d cosa(s) antes de usarlo." % len(FALTA))
+        contar_a_javier()
         sys.exit(1)
     print("Todo listo. Prueba con:")
     print('   python reel.py "C:\\ruta\\a\\tu\\video.mp4" --solo-plan')
     print("   o doble clic en \"Editor de Reels.bat\"")
+    print("   o en Claude Code: \"Aqui esta mi video: <ruta>. Editalo.\"")
+    print("\nLa primera transcripcion baja el modelo de voz (unos 3 GB, una sola vez).")
+    contar_a_javier()
+
+
+def contar_a_javier():
+    print("\nCuanto te tardo instalarlo y donde te atoraste? Cuentale a Javier:")
+    print("   https://javiernieto.net/profesional/recursos/editor-de-reels/")
 
 
 if __name__ == "__main__":

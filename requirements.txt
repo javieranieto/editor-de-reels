@@ -5,6 +5,12 @@ pycapcut
 # (tools/catalogo_voces.py --capcut)
 pillow
 
+# Graficos animados, reels estilo ventana y videos animados (despues: python -m playwright install chromium)
+playwright
+
+# Encuadrar la cara en los reels y escoger cuadros para la miniatura
+opencv-python-headless
+
 # Aceleracion por GPU NVIDIA (opcional; sin esto corre en CPU)
 # nvidia-cublas-cu12      <- descomentar solo con tarjeta NVIDIA (son varios GB)
 # nvidia-cudnn-cu12
