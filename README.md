@@ -43,19 +43,39 @@ o con menos de 16 GB de memoria.
 🔴 **Solo Windows con CapCut de escritorio.** No corre en Mac ni en Linux: el editor escribe
 el proyecto directo en la carpeta de CapCut para Windows. Si no es tu caso, no sigas.
 
-Necesitas además **ffmpeg** (`winget install Gyan.FFmpeg` y reinicia la terminal) y
-**Python 3.8+**. Una GPU NVIDIA es opcional: solo acelera la transcripción.
+Necesitas además **Python 3.9+** y **ffmpeg**: si no los tienes, Claude los instala en el paso de
+abajo. Una tarjeta NVIDIA es opcional: solo acelera la transcripción.
 
 ## Instalar
 
-Desde la carpeta del repo:
+**Con Claude Code (lo más fácil).** Abre una carpeta vacía en VS Code (o donde uses Claude Code)
+y pégale esto:
 
-```bash
-pip install -r requirements.txt
-python tools/configurar.py      # dice exactamente qué te falta
+```text
+Instala el editor de reels de https://github.com/javieranieto/editor-de-reels en esta carpeta. Sigue la sección «Instalar» de su CLAUDE.md, instala lo que me falte y al final corre tools/configurar.py y dime qué quedó listo y qué tengo que hacer yo.
 ```
 
-Abre CapCut una vez y ciérralo (así crea su carpeta de proyectos).
+Claude baja el repo, instala Python, ffmpeg y las librerías si te faltan (te pide permiso en cada
+comando) y te dice qué queda de tu lado. Lo único que no puede hacer por ti es bajar **CapCut de
+escritorio** (capcut.com): ábrelo una vez y ciérralo, así crea su carpeta de proyectos.
+
+**A mano**, si prefieres:
+
+```bash
+git clone https://github.com/javieranieto/editor-de-reels
+cd editor-de-reels
+winget install --id Gyan.FFmpeg -e      # si no tienes ffmpeg; luego abre una terminal nueva
+python -m pip install -r requirements.txt
+python -m playwright install chromium
+python tools/configurar.py              # dice exactamente qué te falta
+```
+
+La primera vez que transcribe baja el modelo de voz (unos 3 GB, una sola vez).
+
+**¿Cuánto te tardó y dónde te atoraste?** Cuéntamelo en la
+[página del editor](https://javiernieto.net/profesional/recursos/editor-de-reels/): con eso se
+mejora esta lista. Y si no programas y prefieres que lo instalemos juntos, ahí mismo está la
+instalación guiada.
 
 **Llaves (opcionales):** el editor corta y arma sin ninguna. Para b-roll hace falta la de
 Pexels (gratis en pexels.com/api) y para voz en off la de ElevenLabs. Van en
