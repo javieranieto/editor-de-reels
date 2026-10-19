@@ -213,6 +213,22 @@ def plan_reel(L, r, stock):
             palabras[i + k]["start"] = round(lo + k * paso, 3)
             palabras[i + k]["end"] = round(lo + (k + 1) * paso - 0.003, 3)
         i = j + 1
+    # Habla rapida («y va a ir» en tres decimas): si al vecino tampoco le sobra, se reparte
+    # parejo entre mas palabras alrededor, sin mover el principio ni el final del grupo.
+    for _ in range(3):
+        cortas = [k for k, w in enumerate(palabras) if w["end"] - w["start"] < 0.05]
+        if not cortas:
+            break
+        for k in cortas:
+            for ancho in (2, 3, 4):
+                a, z = max(0, k - ancho), min(len(palabras) - 1, k + ancho)
+                lo, hi = palabras[a]["start"], palabras[z]["end"]
+                if (hi - lo) / (z - a + 1) >= 0.06:
+                    paso = (hi - lo) / (z - a + 1)
+                    for m in range(a, z + 1):
+                        palabras[m]["start"] = round(lo + (m - a) * paso, 3)
+                        palabras[m]["end"] = round(lo + (m - a + 1) * paso - 0.003, 3)
+                    break
     malas = [w["word"] for k, w in enumerate(palabras)
              if w["end"] - w["start"] < 0.05 or (k and w["start"] < palabras[k - 1]["end"] - 1e-6)]
     if malas:
