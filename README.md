@@ -1,4 +1,8 @@
+<img src="marca/editor-de-reels.svg" width="56" alt="">
+
 # Editor de reels → CapCut
+
+**por Javier Nieto** · una de [mis herramientas abiertas](https://javiernieto.net/profesional/recursos/)
 
 Corta silencios, muletillas y tomas repetidas de un video hablado a cámara y deja un
 **proyecto de CapCut ya armado**: abres CapCut y la línea de tiempo trae los cortes, los

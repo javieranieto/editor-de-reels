@@ -1,0 +1,4 @@
+<!-- Editor de reels, por Javier Nieto: el marco de un reel en una sola linea, con el corte (punto naranja). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="150 95 215 310" fill="none"><path d="M336 268V160C336 132 316 112 288 112H222C194 112 174 132 174 160V340C174 368 194 388 222 388H288C316 388 336 368 336 340V330" stroke="#1f2326" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M232 206L292 250L232 294Z" stroke="#1f2326" stroke-width="22" stroke-linejoin="round" fill="none"/>
+<circle cx="336" cy="299" r="24" fill="#FF6A3D"/></svg>
