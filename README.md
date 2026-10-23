@@ -55,7 +55,7 @@ pasos no te lo van a enseñar, pero te puedo ayudar con la instalación guiada (
 y pégale esto:
 
 ```text
-Instala el editor de reels de https://github.com/javieranieto/editor-de-reels en esta carpeta. Sigue la sección «Instalar» de su CLAUDE.md, instala lo que me falte y al final corre tools/configurar.py y dime qué quedó listo y qué tengo que hacer yo.
+Instala el editor de reels de https://github.com/javieranieto/editor-de-reels-app en esta carpeta. Sigue la sección «Instalar» de su CLAUDE.md, instala lo que me falte y al final corre tools/configurar.py y dime qué quedó listo y qué tengo que hacer yo.
 ```
 
 Claude baja el repo, instala Python, ffmpeg y las librerías si te faltan (te pide permiso en cada
@@ -65,8 +65,8 @@ escritorio** (capcut.com): ábrelo una vez y ciérralo, así crea su carpeta de 
 **A mano**, si prefieres:
 
 ```bash
-git clone https://github.com/javieranieto/editor-de-reels
-cd editor-de-reels
+git clone https://github.com/javieranieto/editor-de-reels-app
+cd editor-de-reels-app
 winget install --id Gyan.FFmpeg -e      # si no tienes ffmpeg; luego abre una terminal nueva
 python -m pip install -r requirements.txt
 python -m playwright install chromium

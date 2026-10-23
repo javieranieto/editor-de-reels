@@ -24,8 +24,8 @@ paso: le estás pidiendo permiso para correr comandos en su computadora.
    carpeta de CapCut para Windows (`%LOCALAPPDATA%\CapCut\User Data\Projects\com.lveditor.draft`)
    y no hay forma de configurarlo para Mac o Linux.
 2. **El repo.** Si la carpeta no lo tiene todavía:
-   `git clone https://github.com/javieranieto/editor-de-reels .` (con el punto, para que quede en
-   esa misma carpeta; si no está vacía, clónalo en una subcarpeta `editor-de-reels`). Si `git` no
+   `git clone https://github.com/javieranieto/editor-de-reels-app .` (con el punto, para que quede en
+   esa misma carpeta; si no está vacía, clónalo en una subcarpeta `editor-de-reels-app`). Si `git` no
    existe: `winget install --id Git.Git -e`.
 3. **Python 3.9 o mayor.** ⚠️ En Windows, `python` puede ser el **atajo falso de la Microsoft
    Store**: abre la tienda o no imprime nada. Compruébalo con `python --version`. Si falta o es
